@@ -23,4 +23,32 @@ class GettingStartedSpec extends FreeSpec with Matchers with GeneratorDrivenProp
     isSorted(Array(2, 2, 2, 2), gt) shouldBe true
     isSorted(Array(3, 2, 3, 4), gt) shouldBe false
   }
+
+  "curry and uncurry" in {
+    import fpinscala.gettingstarted.PolymorphicFunctions._
+    def isNumberAfterConcat(s: String, i: Int): Boolean = (s + i).forall(_.isDigit)
+
+    isNumberAfterConcat("123", 5) shouldBe true
+    isNumberAfterConcat("123a", 5) shouldBe false
+
+    curry(isNumberAfterConcat)("123")(1) shouldBe true
+    curry(isNumberAfterConcat)("aaa")(1) shouldBe false
+
+    val curried: String => Int => Boolean = (a: String) => (b: Int) => (a + b).forall(_.isDigit)
+    curried("123")(4) shouldBe true
+    curried("bbb")(4) shouldBe false
+    uncurry(curried)("123", 3) shouldBe true
+  }
+
+  "compose" in {
+    import fpinscala.gettingstarted.PolymorphicFunctions.compose
+
+    def g(s: String): Boolean = s.forall(_.isDigit)
+
+    def f(a: Int): String = a.toString
+
+    compose(g, f)(10) shouldBe true
+    g(f(10)) shouldBe true
+    (g _).compose(f)(10) shouldBe true
+  }
 }
