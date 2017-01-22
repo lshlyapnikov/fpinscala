@@ -4,7 +4,6 @@ import org.scalacheck.Gen
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FreeSpec, Matchers}
 
-
 class GettingStartedSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
   "factorial" in forAll(Gen.posNum[Int]) { num =>
     import fpinscala.gettingstarted.MyModule.{factorial, factorial3}
