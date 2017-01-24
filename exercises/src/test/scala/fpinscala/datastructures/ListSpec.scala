@@ -4,7 +4,7 @@ import org.scalatest.{FreeSpec, Matchers}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import fpinscala.datastructures.List._
 
-class ListSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
+class ListSpec extends FreeSpec with Matchers {
   "exercise 3.1" in {
     val x = List(1, 2, 3, 4, 5) match {
       case Cons(x, Cons(2, Cons(4, _))) => x
@@ -60,6 +60,7 @@ class ListSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
 
   "exercise 3.8" in {
     foldRight(List(1, 2, 3), Nil: List[Int])(Cons(_, _)) shouldBe List(1, 2, 3)
+    foldRight(List(10, 2), 5.0) { (a, b) => a / b } shouldBe 10 / (2 / 5.0)
   }
 
   "exercise 3.9 length" in {
@@ -80,11 +81,41 @@ class ListSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
     // length
     foldLeft(List(1, 2, 3, 4, 5), 0) { (z, _) => z + 1 } shouldBe 5
     foldLeft(Nil, 0) { (z, _) => z + 1 } shouldBe 0
+    foldLeft(List(10, 2), 5.0) { (b, a) => b / a } shouldBe (5.0 / 10) / 2
   }
 
   "exercise 3.12 reverse" in {
     reverse(List(1, 2, 3)) shouldBe List(3, 2, 1)
     reverse(Nil) shouldBe Nil
   }
+
+  "exercise 3.13" in {
+    foldLeftViaFoldRight(List(10, 2), 5.0) { (b, a) => b / a } shouldBe 5.0 / 10 / 2
+    foldLeft(List(4, 3), 9) { (b, a) => b % a } shouldBe 9 % 4 % 3
+    foldLeftViaFoldRight(List(4, 3), 9) { (b, a) => b % a } shouldBe (9 % 4) % 3
+    foldLeftViaFoldRight(List(1, 2, 3), Nil: List[Int]) { (b, a) => Cons(a, b) } shouldBe List(3, 2, 1)
+
+    foldRightViaFoldLeft(List(1, 2, 3), Nil: List[Int])(Cons(_, _)) shouldBe List(1, 2, 3)
+    foldRightViaFoldLeft(List(2, 3), 8) { (a, b) => b % a } shouldBe 8 % 3 % 2
+  }
+
+  "exercise 3.14 append" in {
+    appendViaReverse(List(1, 2, 3), 4) shouldBe List(1, 2, 3, 4)
+    appendViaFoldRight(List(1, 2, 3), List(4, 5)) shouldBe List(1, 2, 3, 4, 5)
+    appendViaRecursion(List(1, 2, 3), List(4, 5)) shouldBe List(1, 2, 3, 4, 5)
+  }
+
+  "exercise 3.15 concat" in {
+    concat(List(List(1, 2), List(3, 4), List(5, 6))) shouldBe List(1, 2, 3, 4, 5, 6)
+  }
+
+  "exercise 3.16... " in {
+    add1(List(10, 20, 30)) shouldBe List(11, 21, 31)
+    doubleToString(List(1.1, 2.2, 3.3)) shouldBe List("1.1", "2.2", "3.3")
+    map(List(1, 2, 3)) { a => a.toString } shouldBe List("1", "2", "3")
+    filter(List(1, 2, 3, 4)) { a => a % 2 == 0 } shouldBe List(2, 4)
+    filter2(List(1, 2, 3, 4)) { a => a % 2 == 0 } shouldBe List(2, 4)
+  }
+
 
 }

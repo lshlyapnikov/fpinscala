@@ -108,6 +108,12 @@ object List {
     case Cons(h, t) => foldLeft(t, f(z, h))(f)
   }
 
+  def foldLeftViaFoldRight[A, B](l: List[A], z: B)(f: (B, A) => B): B =
+    foldRight(reverse(l), z) { (a: A, b: B) => f(b, a) }
+
+  def foldRightViaFoldLeft[A, B](l: List[A], z: B)(f: (A, B) => B): B =
+    foldLeft(reverse(l), z) { (b: B, a: A) => f(a, b) }
+
   def reverse1[A](l: List[A]): List[A] = {
     @annotation.tailrec
     def loop(as: List[A], acc: List[A]): List[A] = as match {
@@ -120,5 +126,36 @@ object List {
 
   def reverse[A](l: List[A]): List[A] = foldLeft(l, Nil: List[A]) { (z, a) => Cons(a, z) }
 
-  def map[A, B](l: List[A])(f: A => B): List[B] = sys.error("todo")
+  def appendViaReverse[A](l: List[A], a: A): List[A] = reverse(Cons(a, reverse(l)))
+
+  def appendViaFoldRight[A](xs: List[A], ys: List[A]): List[A] = foldRight(xs, ys) { (a, b) => Cons(a, b) }
+
+  def appendViaRecursion[A](xs: List[A], ys: List[A]): List[A] = xs match {
+    case Nil => ys
+    case Cons(h, t) => Cons(h, appendViaRecursion(t, ys))
+  }
+
+  def concat[A](l: List[List[A]]): List[A] = foldRight(l, Nil: List[A]) { (a, b) => append(a, b) }
+
+  def add1(l: List[Int]): List[Int] = foldRight(l, Nil: List[Int]) { (a, b) => Cons(a + 1, b) }
+
+  def doubleToString(l: List[Double]): List[String] = foldRight(l, Nil: List[String]) { (a, b) => Cons(a.toString, b) }
+
+  def map[A, B](l: List[A])(f: A => B): List[B] = foldRight(l, Nil: List[B]) { (a, b) => Cons(f(a), b) }
+
+  def filter[A](l: List[A])(f: A => Boolean): List[A] =
+    foldRight(l, Nil: List[A]) { (a, b) => if (f(a)) Cons(a, b) else b }
+
+  def filter2[A](l: List[A])(f: A => Boolean): List[A] = {
+    val buffer = scala.collection.mutable.ListBuffer[A]()
+    @annotation.tailrec
+    def loop(as: List[A]): Unit = as match {
+      case Nil => ()
+      case Cons(h, t) =>
+        if (f(h)) buffer += h
+        loop(t)
+    }
+    loop(l)
+    List(buffer :_*)
+  }
 }
