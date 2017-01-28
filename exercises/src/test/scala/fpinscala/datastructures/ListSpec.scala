@@ -1,8 +1,7 @@
 package fpinscala.datastructures
 
-import org.scalatest.{FreeSpec, Matchers}
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import fpinscala.datastructures.List._
+import org.scalatest.{FreeSpec, Matchers}
 
 class ListSpec extends FreeSpec with Matchers {
   "exercise 3.1" in {
@@ -107,15 +106,31 @@ class ListSpec extends FreeSpec with Matchers {
 
   "exercise 3.15 concat" in {
     concat(List(List(1, 2), List(3, 4), List(5, 6))) shouldBe List(1, 2, 3, 4, 5, 6)
+    concat(List(List(1), Nil, List(2), Nil, List(3))) shouldBe List(1, 2, 3)
   }
 
-  "exercise 3.16... " in {
+  "exercise 3.16 - 3.22 " in {
     add1(List(10, 20, 30)) shouldBe List(11, 21, 31)
     doubleToString(List(1.1, 2.2, 3.3)) shouldBe List("1.1", "2.2", "3.3")
     map(List(1, 2, 3)) { a => a.toString } shouldBe List("1", "2", "3")
     filter(List(1, 2, 3, 4)) { a => a % 2 == 0 } shouldBe List(2, 4)
     filter2(List(1, 2, 3, 4)) { a => a % 2 == 0 } shouldBe List(2, 4)
+    flatMap(List(1, 2, 3))(i => List(i, i)) shouldBe List(1, 1, 2, 2, 3, 3)
+    flatMap1(List(1, 2, 3))(i => List(i, i)) shouldBe List(1, 1, 2, 2, 3, 3)
+    filterViaFlatMap(List(1, 2, 3, 4)) { a => a % 2 == 0 } shouldBe List(2, 4)
   }
 
+  "exercise 3.22 .. zip and etc" in {
+    sumElements(List(1, 2, 3), List(4, 5, 6)) shouldBe List(5, 7, 9)
+    zipWith(List(1, 2, 3), List(4, 5, 6))(_ + _) shouldBe List(5, 7, 9)
+    zipWith(List(1, 2, 3), List(4, 5, 6))(_ * _) shouldBe List(4, 10, 18)
+  }
+
+  "exercise 3.24 hasSequence" in {
+    hasSubsequence(List(1, 2, 3, 4), List(1, 2)) shouldBe true
+    hasSubsequence(List(1, 2, 3, 4), List(2, 3)) shouldBe true
+    hasSubsequence(List(1, 2, 3, 4), List(1, 2, 3, 4)) shouldBe true
+    hasSubsequence(List(1, 2, 3, 4), List(4)) shouldBe true
+  }
 
 }

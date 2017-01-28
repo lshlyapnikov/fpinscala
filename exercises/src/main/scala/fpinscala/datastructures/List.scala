@@ -148,6 +148,7 @@ object List {
 
   def filter2[A](l: List[A])(f: A => Boolean): List[A] = {
     val buffer = scala.collection.mutable.ListBuffer[A]()
+
     @annotation.tailrec
     def loop(as: List[A]): Unit = as match {
       case Nil => ()
@@ -155,7 +156,49 @@ object List {
         if (f(h)) buffer += h
         loop(t)
     }
+
     loop(l)
-    List(buffer :_*)
+    List(buffer: _*)
+  }
+
+  def flatMap[A, B](as: List[A])(f: A => List[B]): List[B] =
+    concat(map(as)(f))
+
+  def flatMap1[A, B](as: List[A])(f: A => List[B]): List[B] =
+    foldLeft(as, Nil: List[B]) { (b, a) => concat(List(b, f(a))) }
+
+  def filterViaFlatMap[A](l: List[A])(f: A => Boolean): List[A] = flatMap(l) { a => if (f(a)) List(a) else Nil }
+
+  def sumElements(as: List[Int], bs: List[Int]): List[Int] = (as, bs) match {
+    case (Nil, _) => Nil
+    case (_, Nil) => Nil
+    case (Cons(h1, t1), Cons(h2, t2)) => Cons(h1 + h2, sumElements(t1, t2))
+  }
+
+  def zipWith[A](as: List[A], bs: List[A])(f: (A, A) => A): List[A] = (as, bs) match {
+    case (Nil, _) => Nil
+    case (_, Nil) => Nil
+    case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), zipWith(t1, t2)(f))
+  }
+
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = {
+    @annotation.tailrec
+    def startsWith(as: List[A], bs: List[A]): Boolean = (as, bs) match {
+      case (_, Nil) => true
+      case (Nil, _) => false
+      case (Cons(h1, t1), Cons(h2, t2)) =>
+        if (h1 == h2) startsWith(t1, t2)
+        else false
+    }
+
+    @annotation.tailrec
+    def iterate(as: List[A]): Boolean =
+      if (startsWith(as, sub)) true
+      else as match {
+        case Nil => false
+        case Cons(h, t) => iterate(t)
+      }
+
+    iterate(sup)
   }
 }
