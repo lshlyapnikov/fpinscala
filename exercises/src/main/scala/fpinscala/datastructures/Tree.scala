@@ -30,7 +30,7 @@ object Tree {
 
   def depth2[A](tree: Tree[A]): Int = {
     def loop(t: Tree[A], acc: Int): Int = t match {
-      case Leaf(_) => acc + 1
+      case Leaf(_) => acc
       case Branch(l, r) => Math.max(loop(l, acc + 1), loop(r, acc + 1))
     }
 
@@ -38,7 +38,7 @@ object Tree {
   }
 
   def depth[A](tree: Tree[A]): Int = tree match {
-    case Leaf(_) => 1
+    case Leaf(_) => 0
     case Branch(l, r) => Math.max(depth(l), depth(r)) + 1
   }
 
@@ -64,7 +64,7 @@ object Tree {
     fold(tree) { a => a } { (b1, b2) => math.max(b1, b2) }
 
   def depthViaFold[A](tree: Tree[A]): Int =
-    fold(tree) { a => 1 } { (b1, b2) => math.max(b1, b2) + 1 }
+    fold(tree) { a => 0 } { (b1, b2) => math.max(b1, b2) + 1 }
 
   def mapViaFold[A, B](tree: Tree[A])(f: A => B): Tree[B] =
     fold(tree) { a => Leaf(f(a)): Tree[B] } { (b1: Tree[B], b2: Tree[B]) => Branch(b1, b2) }

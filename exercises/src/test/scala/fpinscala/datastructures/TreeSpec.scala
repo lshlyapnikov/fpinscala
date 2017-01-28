@@ -19,11 +19,11 @@ class TreeSpec extends FreeSpec with Matchers {
   }
 
   "exercise 2.27 depth" in {
-    depth2(Leaf(1)) shouldBe 1
-    depth2(Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))) shouldBe 4
+    depth2(Leaf(1)) shouldBe 0
+    depth2(Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))) shouldBe 3
 
-    depth(Leaf(1)) shouldBe 1
-    depth(Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))) shouldBe 4
+    depth(Leaf(1)) shouldBe 0
+    depth(Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))) shouldBe 3
   }
 
   "exercise 2.28 map" in {
@@ -45,10 +45,12 @@ class TreeSpec extends FreeSpec with Matchers {
 
     maximumViaFold(tree) shouldBe 4
 
-    depthViaFold(tree) shouldBe 4
-
     mapViaFold(tree) { a => (a * 10).toString } shouldBe
       Branch(Leaf("10"), Branch(Leaf("20"), Branch(Leaf("30"), Leaf("40"))))
+
+    depthViaFold(Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))) shouldBe 3
+    depthViaFold(Branch(Leaf(1), Leaf(2))) shouldBe 1
+    depthViaFold(Leaf(1)) shouldBe 0
 
   }
 }
