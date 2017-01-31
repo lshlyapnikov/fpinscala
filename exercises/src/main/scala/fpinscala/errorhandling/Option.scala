@@ -33,7 +33,9 @@ object Option {
       val x = 42 + 5
       x + y
     }
-    catch { case e: Exception => 43 } // A `catch` block is just a pattern matching block like the ones we've seen. `case e: Exception` is a pattern that matches any `Exception`, and it binds this value to the identifier `e`. The match returns the value 43.
+    catch {
+      case e: Exception => 43
+    } // A `catch` block is just a pattern matching block like the ones we've seen. `case e: Exception` is a pattern that matches any `Exception`, and it binds this value to the identifier `e`. The match returns the value 43.
   }
 
   def failingFn2(i: Int): Int = {
@@ -41,17 +43,38 @@ object Option {
       val x = 42 + 5
       x + ((throw new Exception("fail!")): Int) // A thrown Exception can be given any type; here we're annotating it with the type `Int`
     }
-    catch { case e: Exception => 43 }
+    catch {
+      case e: Exception => 43
+    }
   }
 
   def mean(xs: Seq[Double]): Option[Double] =
     if (xs.isEmpty) None
     else Some(xs.sum / xs.length)
-  def variance(xs: Seq[Double]): Option[Double] = sys.error("todo")
 
-  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = sys.error("todo")
+  def variance2(xs: Seq[Double]): Option[Double] = mean(xs).flatMap { m =>
+    if (xs.isEmpty) None
+    else Some(xs.map { x => math.pow(x - m, 2) }.sum / xs.length)
+  }
 
-  def sequence[A](a: List[Option[A]]): Option[List[A]] = sys.error("todo")
+  def variance(xs: Seq[Double]): Option[Double] = mean(xs).flatMap { m =>
+    mean(xs.map { x => math.pow(x - m, 2) })
+  }
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = sys.error("todo")
+  def lift[A,B](f: A => B): Option[A] => Option[B] = (x: Option[A]) => x.map(f)
+
+  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+    a.flatMap { a1 => b.map { b1 => f(a1, b1) }}
+
+  def sequence[A](as: List[Option[A]]): Option[List[A]] = as.foldRight(Some(Nil): Option[List[A]]) { (a, b) =>
+    map2(a, b) { (aa, bb) => aa :: bb }
+  }
+
+  def traverse[A, B](as: List[A])(f: A => Option[B]): Option[List[B]] =
+    as.foldRight(Some(Nil): Option[List[B]]) { (a, b) =>
+      map2(f(a): Option[B], b: Option[List[B]]) { (aa, bb) => aa :: bb }
+    }
+
+  def sequenceViaTraverse[A](as: List[Option[A]]): Option[List[A]] =
+    traverse(as) { a => a }
 }
