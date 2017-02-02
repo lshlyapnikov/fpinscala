@@ -21,4 +21,27 @@ class EitherSpec extends FreeSpec with Matchers {
     Right(1).map2(Right(10))(f) shouldBe Right(11)
   }
 
+  "exercise 4.7" in {
+    def MyTry[R](a: => R): Either[Throwable, R] =
+      try Right(a) catch {
+        case e: Throwable => Left(e)
+      }
+
+    import fpinscala.errorhandling.Either._
+
+    traverse(List("1", "2", "3")) { s => MyTry(s.toInt) } shouldBe Right(List(1, 2, 3))
+    traverse(List("1", "a", "3")) { s => MyTry(s.toInt) } should
+      matchPattern { case Left(_: NumberFormatException) => }
+    traverse(Nil: List[String]) { s => MyTry(s.toInt) } shouldBe Right(Nil)
+
+    traverse1(List("1", "2", "3")) { s => MyTry(s.toInt) } shouldBe Right(List(1, 2, 3))
+    traverse1(List("1", "a", "3")) { s => MyTry(s.toInt) } should
+      matchPattern { case Left(_: NumberFormatException) => }
+    traverse1(Nil: List[String]) { s => MyTry(s.toInt) } shouldBe Right(Nil)
+
+    sequence(List(Right(1), Right(2), Right(3))) shouldBe Right(List(1, 2, 3))
+    sequence(List(Right(1), Left(new RuntimeException()), Right(3))) should
+      matchPattern { case Left(_: RuntimeException) => }
+    sequence(Nil: List[Either[Exception, Int]]) shouldBe Right(Nil)
+  }
 }
