@@ -39,9 +39,37 @@ class EitherSpec extends FreeSpec with Matchers {
       matchPattern { case Left(_: NumberFormatException) => }
     traverse1(Nil: List[String]) { s => MyTry(s.toInt) } shouldBe Right(Nil)
 
+    traverse2(List("1", "2", "3")) { s => MyTry(s.toInt) } shouldBe Right(List(1, 2, 3))
+    traverse2(List("1", "a", "3")) { s => MyTry(s.toInt) } should
+      matchPattern { case Left(_: NumberFormatException) => }
+    traverse2(Nil: List[String]) { s => MyTry(s.toInt) } shouldBe Right(Nil)
+
     sequence(List(Right(1), Right(2), Right(3))) shouldBe Right(List(1, 2, 3))
     sequence(List(Right(1), Left(new RuntimeException()), Right(3))) should
       matchPattern { case Left(_: RuntimeException) => }
     sequence(Nil: List[Either[Exception, Int]]) shouldBe Right(Nil)
+  }
+
+  "exercise 4.8" in {
+    def MyTry[R](a: => R): Either[Throwable, R] =
+      try Right(a) catch {
+        case e: Throwable => Left(e)
+      }
+
+    import fpinscala.errorhandling.Either._
+
+    traverseAll(List("1", "2", "3")) { s => MyTry(s.toInt) } shouldBe Right(List(1, 2, 3))
+    traverseAll(List("1", "a", "3")) { s => MyTry(s.toInt) } should
+      matchPattern { case Left(List(_: NumberFormatException)) => }
+    traverseAll(Nil: List[String]) { s => MyTry(s.toInt) } shouldBe Right(Nil)
+    traverseAll(List("1", "a", "2", "b", "3")) { s => MyTry(s.toInt) } should
+      matchPattern { case Left(List(_: NumberFormatException, _: NumberFormatException)) => }
+
+    sequenceAll(List(Right(1), Right(2), Right(3))) shouldBe Right(List(1, 2, 3))
+    sequenceAll(List(Right(1), Left(new RuntimeException()), Right(3))) should
+      matchPattern { case Left(List(_: RuntimeException)) => }
+    sequenceAll(Nil: List[Either[Exception, Int]]) shouldBe Right(Nil)
+    sequenceAll(List(Right(1), Left(new RuntimeException()), Right(3), Left(new NumberFormatException()))) should
+      matchPattern { case Left(List(_: RuntimeException, _: NumberFormatException)) => }
   }
 }

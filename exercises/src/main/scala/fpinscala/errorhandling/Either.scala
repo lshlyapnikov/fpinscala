@@ -35,11 +35,32 @@ object Either {
 
   def traverse1[E, A, B](as: List[A])(f: A => Either[E, B]): Either[E, List[B]] = as match {
     case Nil => Right(Nil)
-    case t :: h => f(t).flatMap { bb => traverse1(h)(f).map { hh => bb :: hh }}
+    case h :: t => for {
+      b <- f(h)
+      bs <- traverse1(t)(f)
+    } yield b :: bs
+  }
+
+  def traverse2[E, A, B](as: List[A])(f: A => Either[E, B]): Either[E, List[B]] = as match {
+    case Nil => Right(Nil)
+    case h :: t => f(h).flatMap { bb => traverse2(t)(f).map { hh => bb :: hh }}
+  }
+
+  def traverseAll[E, A, B](as: List[A])(f: A => Either[E, B]): Either[List[E], List[B]] = as match {
+    case Nil => Right(Nil)
+    case h :: t => (f(h), traverseAll(t)(f)) match {
+      case (Right(b), Right(bs)) => Right(b :: bs)
+      case (Left(e), Left(es)) => Left(e :: es)
+      case (Right(b), Left(es)) => Left(es)
+      case (Left(e), Right(bs)) => Left(e :: Nil)
+    }
   }
 
   def sequence[E, A](es: List[Either[E, A]]): Either[E, List[A]] =
     traverse(es) { a => a }
+
+  def sequenceAll[E, A](es: List[Either[E, A]]): Either[List[E], List[A]] =
+    traverseAll(es) { a => a }
 
   def mean(xs: IndexedSeq[Double]): Either[String, Double] =
     if (xs.isEmpty)
