@@ -66,7 +66,7 @@ class StreamSpec extends FreeSpec with Matchers {
 
   "exercise 5.6 headOption via foldRight" in {
     val testData = new StreamTestData {}
-    testData.NonEmpty.headOption shouldBe Option(10)
+    testData.stream.headOption shouldBe Option(10)
     testData.counter shouldBe 1
     Stream.empty[Int].headOption shouldBe None
   }
@@ -74,7 +74,7 @@ class StreamSpec extends FreeSpec with Matchers {
   trait StreamTestData {
     var counter = 0
 
-    val NonEmpty: Stream[Int] = cons({ counter += 1; 10 },
+    val stream: Stream[Int] = cons({ counter += 1; 10 },
       cons({ counter += 1; 21 },
         cons({ counter += 1; 30 },
           cons({ counter += 1; 40 }, Stream.empty))))
@@ -82,7 +82,7 @@ class StreamSpec extends FreeSpec with Matchers {
 
   "exercise 5.7 map" in {
     val testData = new StreamTestData {}
-    val bs = testData.NonEmpty.map { a => a * 10 }
+    val bs = testData.stream.map { a => a * 10 }
     testData.counter shouldBe 1
     bs.toList shouldBe List(100, 210, 300, 400)
     testData.counter shouldBe 4
@@ -91,7 +91,7 @@ class StreamSpec extends FreeSpec with Matchers {
 
   "exercise 5.7 flatMap" in {
     val testData = new StreamTestData {}
-    val bs = testData.NonEmpty.flatMap { a => Stream(a, a * 10) }
+    val bs = testData.stream.flatMap { a => Stream(a, a * 10) }
     testData.counter shouldBe 1
     bs.toList shouldBe List(10, 100, 21, 210, 30, 300, 40, 400)
     testData.counter shouldBe 4
@@ -100,7 +100,7 @@ class StreamSpec extends FreeSpec with Matchers {
 
   "exercise 5.7 filter" in {
     val testData = new StreamTestData {}
-    val bs = testData.NonEmpty.filter(_ % 2 == 0)
+    val bs = testData.stream.filter(_ % 2 == 0)
     testData.counter shouldBe 1
     bs.toList shouldBe List(10, 30, 40)
     testData.counter shouldBe 4
@@ -109,7 +109,7 @@ class StreamSpec extends FreeSpec with Matchers {
 
   "one iteration over the stream" in {
     val testData = new StreamTestData {}
-    val bs = testData.NonEmpty.map(_ * 10).map(_ + 1).filter(_ > 0).filter(_ > 10)
+    val bs = testData.stream.map(_ * 10).map(_ + 1).filter(_ > 0).filter(_ > 10)
     testData.counter shouldBe 1
     bs.toList shouldBe List(101, 211, 301, 401)
     testData.counter shouldBe 4
@@ -149,4 +149,95 @@ class StreamSpec extends FreeSpec with Matchers {
     constantViaUnfold(10).take(3).toList shouldBe List(10, 10, 10)
     fromViaUnfold(5).take(3).toList shouldBe List(5, 6, 7)
   }
+
+  "exercise 5.13 mapViaUnfold" in {
+    val testData = new StreamTestData {}
+    val bs = testData.stream.mapViaUnfold { a => a * 10 }
+    testData.counter shouldBe 1
+    bs.toList shouldBe List(100, 210, 300, 400)
+    testData.counter shouldBe 4
+    Stream.empty[Int].mapViaUnfold { a => a * 10 }.toList shouldBe Nil
+  }
+
+  "exercise 5.13 takeViaUnfold" in {
+    val testData = new StreamTestData {}
+    testData.counter shouldBe 0
+    testData.stream.takeViaUnfold(2).toList shouldBe List(10, 21)
+    testData.counter shouldBe 2
+  }
+
+  "exercise 5.13 takeWhileViaUnfold" in {
+    val testData = new StreamTestData {}
+    testData.counter shouldBe 0
+    testData.stream.takeWhileViaUnfold(_ < 30).toList shouldBe List(10, 21)
+  }
+
+  "exercise 5.13 zipWith" in {
+    val testData = new StreamTestData {}
+    testData.stream.zipWith(Stream.empty[String]) { (a, b) => (a, b) }.toList shouldBe List.empty[(Int, String)]
+    testData.stream.zipWith(Stream("a", "b"))((_, _)).toList shouldBe List((10, "a"), (21, "b"))
+    testData.counter shouldBe 2
+  }
+
+  "exercise 5.13 zipAll" in {
+    val testData = new StreamTestData {}
+    testData.stream.zipAll(Stream("a", "b")).toList shouldBe
+      List((Some(10), Some("a")), (Some(21), Some("b")), (Some(30), None), (Some(40), None))
+  }
+
+  "exercise 5.13 hasSubsequence" in {
+    val testData = new StreamTestData {}
+    testData.stream.hasSubsequence(Stream(21)) shouldBe true
+    testData.counter shouldBe 3
+
+    Stream.empty[Int].hasSubsequence(Stream(1)) shouldBe false
+    Stream(1, 2, 3).hasSubsequence(Stream(2, 3)) shouldBe true
+    Stream(1, 2, 3).hasSubsequence(Stream.empty[Int]) shouldBe true
+  }
+
+  "exercise 5.4 starsWith" in {
+    {
+      val testData = new StreamTestData {}
+      testData.stream.startsWith(Stream(10, 21)) shouldBe true
+      testData.counter shouldBe 3
+    }
+
+    {
+      val testData = new StreamTestData {}
+      testData.stream.startsWith(Stream(10)) shouldBe true
+      testData.counter shouldBe 2
+    }
+
+    {
+      val testData = new StreamTestData {}
+      testData.stream.startsWith(Stream(10, 21, 30, 40)) shouldBe true
+      testData.counter shouldBe 4
+    }
+
+    Stream.empty[Int].startsWith(Stream(1)) shouldBe false
+    Stream(1, 2, 3).startsWith(Stream(2, 3)) shouldBe false
+    Stream(1, 2, 3).startsWith(Stream.empty[Int]) shouldBe true
+  }
+
+  "exercise 5.15" in {
+    Stream(1, 2, 3).tails1.toList.map { _.toList } shouldBe List(List(1, 2, 3), List(2, 3), List(3), Nil)
+    Stream(1, 2, 3).tails2.toList.map { _.toList } shouldBe List(List(1, 2, 3), List(2, 3), List(3), Nil)
+    Stream(1, 2, 3).tails.toList.map { _.toList } shouldBe List(List(1, 2, 3), List(2, 3), List(3), Nil)
+  }
+
+  "exercise 5.15 hasSubsequence2" in {
+    val testData = new StreamTestData {}
+    testData.stream.hasSubsequence2(Stream(21)) shouldBe true
+    testData.counter shouldBe 3
+
+    Stream.empty[Int].hasSubsequence2(Stream(1)) shouldBe false
+    Stream(1, 2, 3).hasSubsequence2(Stream(2, 3)) shouldBe true
+    Stream(1, 2, 3).hasSubsequence2(Stream.empty[Int]) shouldBe true
+  }
+
+  "exercise 5.16 scanRight" in {
+    Stream(1, 2, 3).scanRightSlow(0) { (a, b) => a + b }.toList shouldBe List(1 + 2 + 3 + 0, 2 + 3 + 0, 3 + 0, 0)
+    Stream(1, 2, 3).scanRight(0) { (a, b) => a + b }.toList shouldBe List(1 + 2 + 3 + 0, 2 + 3 + 0, 3 + 0, 0)
+  }
+
 }
