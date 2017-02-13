@@ -112,5 +112,7 @@ class StateSpec extends FreeSpec with Matchers {
       x should be < 1.0
       d(x) shouldBe 1
     }
+
+    RngTestStream(123)(doubleViaMap).take(SmallSampleSize).last._2.size shouldBe SmallSampleSize
   }
 }
