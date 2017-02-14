@@ -115,4 +115,31 @@ class StateSpec extends FreeSpec with Matchers {
 
     RngTestStream(123)(doubleViaMap).take(SmallSampleSize).last._2.size shouldBe SmallSampleSize
   }
+
+  "exercise doubleViaMyMap" in {
+    RngTestStream(123)(doubleViaMyMap).take(SmallSampleSize).foreach { case (x, d) =>
+      x should be >= 0.0
+      x should be < 1.0
+      d(x) shouldBe 1
+    }
+
+    RngTestStream(123)(doubleViaMyMap).take(SmallSampleSize).last._2.size shouldBe SmallSampleSize
+  }
+
+  "map2 test" in {
+    def doubleInt2: Rand[(Double, Int)] = map2(double, int) { (d, i) => (d, i) }
+
+    RngTestStream(123)(doubleInt2).take(SmallSampleSize).foreach { case ((d, i), c) =>
+      d should be >= 0.0
+      d should be < 1.0
+      c((d, i)) shouldBe 1
+    }
+  }
+
+  "exercise 6.7 sequence" in {
+    RngTestStream(123)(ints_(5)).take(SmallSampleSize).foreach { case (list, d) =>
+      list.size shouldBe 5
+      d(list) shouldBe 1
+    }
+  }
 }

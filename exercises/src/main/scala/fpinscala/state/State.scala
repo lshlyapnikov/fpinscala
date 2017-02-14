@@ -50,6 +50,13 @@ object RNG {
 
   def doubleViaMap: Rand[Double] = map(nonNegativeInt) { i => i / (Int.MaxValue.toDouble + 1) }
 
+  def doubleViaMyMap: Rand[Double] = mapMyImpl(nonNegativeInt) { i => i / (Int.MaxValue.toDouble + 1) }
+
+  def mapMyImpl[A,B](s: Rand[A])(f: A => B): Rand[B] = { rng: RNG =>
+    val (a, rng1) = s(rng)
+    (f(a), rng1)
+  }
+
   def intDouble(rng: RNG): ((Int,Double), RNG) = {
     val (i, rng1) = rng.nextInt
     val (d, rng2) = double(rng1)
@@ -83,9 +90,20 @@ object RNG {
 
   def nonNegativeEven: Rand[Int] =  map(nonNegativeInt)(i => i - (i % 2))
 
-  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = ???
+  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = { rng0 =>
+    val (a, rng1) = ra(rng0)
+    val (b, rng2) = rb(rng1)
+    (f(a, b), rng2)
+  }
 
-  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = ???
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = { rng0 =>
+    fs.foldRight((Nil: List[A], rng0: RNG)) { case (ra, (list, rng)) =>
+      val (a, rng1) = ra(rng)
+      (a :: list, rng1)
+    }
+  }
+
+  def ints_(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
 
   def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = ???
 }
