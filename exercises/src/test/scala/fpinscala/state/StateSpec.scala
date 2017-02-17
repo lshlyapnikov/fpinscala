@@ -198,7 +198,31 @@ class StateSpec extends FreeSpec with Matchers {
     val sy: State[Unit, Int] = State.unit(20)
     sx.map2(sy)(add).run(()) shouldBe(30, ())
 
-    //    def sInts_(count: Int): State[List[Int]] = sequence(List.fill(count)(int))
+    def incInt: State[Int, Int] = State { s => (s, s + 1) }
+    def oddInt: State[Int, Int] = incInt.flatMap { x => if (x % 2 != 0) State.unit(x) else oddInt }
+    def evenInt: State[Int, Int] = incInt.flatMap { x => if (x % 2 == 0) State.unit(x) else evenInt }
+
+    def intSequence: State[Int, List[Int]] =
+      State.sequence(List(evenInt, evenInt, evenInt, incInt, oddInt, oddInt, oddInt, oddInt, incInt))
+
+    val (lst: List[Int], s) = intSequence.run(0)
+    println(lst)
+    lst should have length 9
+    lst.sliding(2).foreach { a =>
+      a.head should be < a.last
+    }
+
+    val vec = lst.toVector
+    vec(0) % 2 shouldBe 0
+    vec(1) % 2 shouldBe 0
+    vec(2) % 2 shouldBe 0
+    vec(3) shouldBe vec(2) + 1
+    vec(4) % 2 shouldBe 1
+    vec(5) % 2 shouldBe 1
+    vec(6) % 2 shouldBe 1
+    vec(7) % 2 shouldBe 1
+    vec(8) shouldBe vec(7) + 1
+    s shouldBe vec(8) + 1
   }
 
   "exercise 6.11 Candy Dispenser" in {

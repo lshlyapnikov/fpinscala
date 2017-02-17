@@ -158,11 +158,12 @@ object State {
   def unit[S, A](a: A): State[S, A] = State(s => (a, s))
 
   def sequence[S, A](fs: List[State[S, A]]): State[S, List[A]] = State { s0 =>
-    fs.foldRight((Nil: List[A], s0)) { (a, b) =>
+    val (a, s) = fs.foldLeft((Nil: List[A], s0)) { (b, a) =>
       val (list, s) = b
       val (b1, s1) = a.run(s)
       (b1 :: list, s1)
     }
+    (a.reverse, s)
   }
 
   def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = State { s0 =>
