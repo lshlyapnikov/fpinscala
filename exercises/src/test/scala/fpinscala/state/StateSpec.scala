@@ -142,4 +142,83 @@ class StateSpec extends FreeSpec with Matchers {
       d(list) shouldBe 1
     }
   }
+
+  "exercise 6.8 nonNegativeLessThan" in {
+    RngTestStream(123)(nonNegativeLessThan(10)).take(SmallSampleSize).foreach { case (x, d) =>
+      x should be >= 0
+      x should be < 10
+    }
+  }
+
+  "exercise 6.9 map_" in {
+    def doubleViaMap_ : Rand[Double] = map_(nonNegativeInt) { i => i / (Int.MaxValue.toDouble + 1) }
+
+    RngTestStream(123)(doubleViaMap_).take(SmallSampleSize).foreach { case (x, d) =>
+      x should be >= 0.0
+      x should be < 1.0
+      d(x) shouldBe 1
+    }
+  }
+
+  "exercise 6.9 map2_ " in {
+    def doubleInt2: Rand[(Double, Int)] = map2_(double, int) { (d, i) => (d, i) }
+
+    RngTestStream(123)(doubleInt2).take(SmallSampleSize).foreach { case ((d, i), c) =>
+      d should be >= 0.0
+      d should be < 1.0
+      c((d, i)) shouldBe 1
+    }
+  }
+
+  "check for normal distribution" in {
+    def rollDie: Rand[Int] = map(nonNegativeLessThan(6))(_ + 1)
+
+    val sampleSize = SmallSampleSize
+    val (_, d: Map[Int, Int]) = RngTestStream(123)(rollDie).take(sampleSize).last
+    d should have size 6
+    val ps = d.values.map { x => x.toDouble / sampleSize }
+    val mu = 1.toDouble / 6
+    println(d)
+    println(mu)
+    println(ps)
+    ps.foreach { p =>
+      math.abs(p - mu) should be < 0.01
+    }
+  }
+
+  "exercise 6.10 unit, map, map2, flatMap" in {
+    val s0: State[Unit, Int] = State.unit(10)
+    s0.run(()) shouldBe(10, ())
+    val s1 = s0.map(x => x * 100)
+    s1.run(()) shouldBe(1000, ())
+
+    def add(x: Int, y: Int): Int = x + y
+
+    val sx: State[Unit, Int] = State.unit(10)
+    val sy: State[Unit, Int] = State.unit(20)
+    sx.map2(sy)(add).run(()) shouldBe(30, ())
+
+    //    def sInts_(count: Int): State[List[Int]] = sequence(List.fill(count)(int))
+  }
+
+  "exercise 6.11 Candy Dispenser" in {
+    import State._
+    simulateMachine(List(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn)).run(
+      Machine(locked = true, coins = 10, candies = 5)
+    ) should be(
+      ((14, 1), Machine(locked = true, coins = 14, candies = 1))
+    )
+
+    simulateMachine(List(Turn)).run(
+      Machine(locked = true, coins = 10, candies = 5)
+    ) should be(
+      ((10, 5), Machine(locked = true, coins = 10, candies = 5))
+    )
+
+    simulateMachine(List()).run(
+      Machine(locked = true, coins = 10, candies = 5)
+    ) should be(
+      ((10, 5), Machine(locked = true, coins = 10, candies = 5))
+    )
+  }
 }
