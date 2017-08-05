@@ -38,6 +38,16 @@ class OptionSpec extends FreeSpec with Matchers {
     map2(Some(1), Some(10))(f) shouldBe Some(11)
   }
 
+  "map3" in {
+    def f(x: Int, y: Int, z: Int): Int = x + y + z
+
+    map3(None, None, None)(f) shouldBe None
+    map3(Some(1), Some(2), Some(3))(f) shouldBe Some(1 + 2 + 3)
+    map3(None, Some(2), Some(3))(f) shouldBe None
+    map3(Some(1), None, Some(3))(f) shouldBe None
+    map3(Some(1), Some(2), None)(f) shouldBe None
+  }
+
   "exercise 4.4 sequence" in {
     sequence(List(Some(1), Some(2), Some(3))) shouldBe Some(List(1, 2, 3))
     sequence(Nil: List[Option[Int]]) shouldBe Some(Nil)

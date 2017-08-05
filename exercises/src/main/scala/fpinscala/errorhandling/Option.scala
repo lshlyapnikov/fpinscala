@@ -66,6 +66,11 @@ object Option {
   def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
     a.flatMap { a1 => b.map { b1 => f(a1, b1) }}
 
+  def map3[A, B, C, D](a: Option[A], b: Option[B], c: Option[C])(f: (A, B, C) => D): Option[D] = {
+    val g: (C) => Option[D] = (cc: C) => map2(a, b){ (aa, bb) => f(aa, bb, cc) }
+    c.flatMap { cc => g(cc) }
+  }
+
   def sequence[A](as: List[Option[A]]): Option[List[A]] = as.foldRight(Some(Nil): Option[List[A]]) { (a, b) =>
     map2(a, b) { (aa, bb) => aa :: bb }
   }
