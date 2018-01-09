@@ -4,9 +4,15 @@ import language.higherKinds
 
 trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trait
 
+  def run[A](p: Parser[A])(input: String): Either[ParseError, A]
+
+  def char(c: Char): Parser[Char]
+
+  def string(s: String): Parser[String]
+
+  def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]]
+
   case class ParserOps[A](p: Parser[A]) {
-
-
   }
 
   object Laws {
@@ -32,3 +38,4 @@ case class Location(input: String, offset: Int = 0) {
 case class ParseError(stack: List[(Location,String)] = List(),
                       otherFailures: List[ParseError] = List()) {
 }
+
