@@ -16,28 +16,33 @@ object MyParser {
 
     override def char(c: Char): Parser[Char] =
       location =>
-        if (location.offset + 1 > location.input.length)
-          Left(ParseError(List(location -> c.toString)))
+        if (location.end)
+          Left(location.toError(c.toString))
         else {
           val result: Char = location.input.charAt(location.offset)
-          if (result == c)
-            point(result)(location.advanceBy(1)) //Right((location.advanceBy(1), result))
-          else Left(ParseError(List(location -> c.toString)))
+          if (result == c) point(result)(location.advanceBy(1))
+          else Left(location.toError(c.toString))
       }
 
-    override def string(s: String): Parser[String] = {
-      def f(location: Location): Either[ParseError, (Location, String)] = {
-        val length = s.length()
-        if (location.offset + length > location.input.length) Left(ParseError(List(location -> s)))
-        else {
-          val result: String = location.input.slice(location.offset, location.offset + length)
-          if (result == s)
-            point(result)(location.advanceBy(length)) //Right((location.advanceBy(length), result))
-          else Left(ParseError(List(location -> s)))
-        }
+    override def string(s: String): Parser[String] = { location: Location =>
+      val length = s.length()
+      if (location.offset + length > location.input.length)
+        Left(location.toError(s))
+      else {
+        val result: String = location.input.slice(location.offset, location.offset + length)
+        if (result == s)
+          point(result)(location.advanceBy(length))
+        else Left(location.toError(s))
+      }
+    }
+
+    def count(c: Char): Parser[Int] = { location: Location =>
+      def loop(l: Location, acc: Int): (Location, Int) = {
+        if (!l.end && l.input.charAt(l.offset) == c) loop(l.advanceBy(1), acc + 1)
+        else (l, acc)
       }
 
-      f
+      Right(loop(location, 0))
     }
 
     override def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] =

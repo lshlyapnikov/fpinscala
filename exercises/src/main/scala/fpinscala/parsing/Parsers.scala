@@ -14,6 +14,8 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
 
   def string(s: String): Parser[String]
 
+  def count(c: Char): Parser[Int]
+
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]]
 
   case class ParserOps[A](p: Parser[A]) {
@@ -38,6 +40,8 @@ case class Location(input: String, offset: Int = 0) {
   def currentLine: String =
     if (input.length > 1) input.lines.drop(line - 1).next
     else ""
+
+  def end: Boolean = offset >= input.length
 }
 
 case class ParseError(stack: List[(Location, String)] = List(),
