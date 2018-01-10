@@ -1,8 +1,8 @@
 package fpinscala.parsing
 
 import org.scalacheck.Arbitrary.arbitrary
-import org.scalacheck.{Gen, Shrink}
-import org.scalacheck.Gen.{chooseNum, posNum}
+import org.scalacheck.Gen.chooseNum
+import org.scalacheck.Shrink
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FreeSpec, Matchers}
 
@@ -11,8 +11,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   private val parser = MyParser.IteratingParser
   import parser._
 
-  private implicit val noStringShrink = Shrink.shrinkAny[String]
-  private implicit val noIntShrink    = Shrink.shrinkAny[Int]
+  private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
+  private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 
   "exact string" in forAll(arbitrary[String]) { a =>
     parser.run(string(a))(a) shouldBe Right(a)
@@ -45,5 +45,27 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
 
   "listOfN" in forAll(arbitrary[String].filter(_.nonEmpty), chooseNum[Int](1, 10)) { (a, n) =>
     parser.run(listOfN(n, string(a)))(a * n) shouldBe Right(List.fill(n)(a))
+  }
+
+  "or" in forAll(arbitrary[String].filter(_.nonEmpty), arbitrary[String].filter(_.nonEmpty)) {
+    (a, b) =>
+      parser.run(string(a) or string(b))(a) shouldBe Right(a)
+      parser.run(string(a) or string(b))(b) shouldBe Right(b)
+  }
+
+  "or with one arg empty" in forAll(arbitrary[String].filter(_.nonEmpty)) { a =>
+    parser.run(string("") or string(a))("") shouldBe Right("")
+    parser.run(string("") or string(a))(a) shouldBe Right("")
+    parser.run(string(a) or string(""))("") shouldBe Right("")
+    parser.run(string(a) or string(""))(a) shouldBe Right(a)
+  }
+
+  "listOfN or " in {
+    parser.run(listOfN(3, string("ab") | string("cad")))("ababcad") shouldBe Right(
+      List("ab", "ab", "cad"))
+    parser.run(listOfN(3, string("ab") | string("cad")))("cadabab") shouldBe Right(
+      List("cad", "ab", "ab"))
+    parser.run(listOfN(3, string("ab") | string("cad")))("ababab") shouldBe Right(
+      List("ab", "ab", "ab"))
   }
 }

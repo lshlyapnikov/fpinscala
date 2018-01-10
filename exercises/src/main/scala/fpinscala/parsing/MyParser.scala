@@ -8,6 +8,12 @@ object MyParser {
     override def run[A](p: Parser[A])(input: String): Either[ParseError, A] =
       p(Location(input)).map(t => t._2)
 
+    override def or[A](p1: Parser[A], p2: Parser[A]): Parser[A] = { location: Location =>
+      val a = p1(location)
+      if (a.isRight) a
+      else p2(location)
+    }
+
     override def char(c: Char): Parser[Char] =
       location =>
         if (location.offset + 1 > location.input.length)
@@ -57,7 +63,7 @@ object MyParser {
     private def sequence[A](ps: List[Parser[A]]): Parser[List[A]] = {
       def f(location: Location): Either[ParseError, (Location, List[A])] = {
         val z: Either[ParseError, (Location, List[A])] = Right(location -> List.empty)
-        ps.foldLeft(z) { (acc, p) =>
+        val r = ps.foldLeft(z) { (acc, p) =>
           acc.flatMap {
             case (location0, as) =>
               p(location0).map {
@@ -66,6 +72,7 @@ object MyParser {
               }
           }
         }
+        r.map { case (l, as) => (l, as.reverse) }
       }
 
       f
