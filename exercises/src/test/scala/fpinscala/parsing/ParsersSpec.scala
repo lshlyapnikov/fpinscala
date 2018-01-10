@@ -11,7 +11,6 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   private val parser = MyParser.IteratingParser
   import parser._
 
-  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
   private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 
@@ -106,5 +105,11 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   "count" in forAll(arbitrary[Char], chooseNum[Int](1, 10)) { (c, n) =>
     val str: String = List.fill(n)(c).mkString
     parser.run(count(c))(str) shouldBe Right(n)
+  }
+
+  "count 0" in forAll(arbitrary[Char], arbitrary[String]) { (c, str) =>
+    whenever(str.isEmpty || str.charAt(0) != c) {
+      parser.run(count(c))(str) shouldBe Right(0)
+    }
   }
 }
