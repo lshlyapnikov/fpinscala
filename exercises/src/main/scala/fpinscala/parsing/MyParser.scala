@@ -20,7 +20,8 @@ object MyParser {
           Left(ParseError(List(location -> c.toString)))
         else {
           val result: Char = location.input.charAt(location.offset)
-          if (result == c) Right((location.advanceBy(1), result))
+          if (result == c)
+            point(result)(location.advanceBy(1)) //Right((location.advanceBy(1), result))
           else Left(ParseError(List(location -> c.toString)))
       }
 
@@ -30,7 +31,8 @@ object MyParser {
         if (location.offset + length > location.input.length) Left(ParseError(List(location -> s)))
         else {
           val result: String = location.input.slice(location.offset, location.offset + length)
-          if (result == s) Right((location.advanceBy(length), result))
+          if (result == s)
+            point(result)(location.advanceBy(length)) //Right((location.advanceBy(length), result))
           else Left(ParseError(List(location -> s)))
         }
       }
@@ -44,9 +46,11 @@ object MyParser {
     // forall a b. map2(point(a), point(b))((_, _)) = point((a, b))
     // forall a fb. map2(point(a), fb)((x, y) => y) = fb
     // forall fa b. map2(fa, point(b))((x, y) => x) = fa
-    private def point[A](a: A): Parser[A] = ???
+    def point[A](a: A): Parser[A] = { location: Location =>
+      Right((location, a))
+    }
 
-    private def map2[A, B, C](pa: Parser[A], pb: Parser[B])(f: (A, B) => C): Parser[C] = {
+    def map2[A, B, C](pa: Parser[A], pb: Parser[B])(f: (A, B) => C): Parser[C] = {
       def r(location0: Location): Either[ParseError, (Location, C)] = {
         pa(location0).flatMap {
           case (location1, a) =>

@@ -68,4 +68,37 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
     parser.run(listOfN(3, string("ab") | string("cad")))("ababab") shouldBe Right(
       List("ab", "ab", "ab"))
   }
+
+  "forall a b. map2(point(a), point(b))((_, _)) = point((a, b))" in forAll(arbitrary[String],
+                                                                           arbitrary[String],
+                                                                           arbitrary[String]) {
+    (a, b, c) =>
+      val f = map2(point(a), point(b))((_, _))
+      val g = point((a, b))
+
+      val fc = parser.run(f)(c)
+      val gc = parser.run(g)(c)
+
+      fc shouldBe gc
+  }
+
+  "forall a fb. map2(point(a), fb)((x, y) => y) = fb" in forAll(arbitrary[String],
+                                                                arbitrary[String],
+                                                                arbitrary[String]) { (a, b, c) =>
+    def fb = string(b)
+
+    val g = map2(point(a), fb)((x, y) => y)
+
+    parser.run(g)(c) shouldBe parser.run(fb)(c)
+  }
+
+  "forall fa b. map2(fa, point(b))((x, y) => x) = fa" in forAll(arbitrary[String],
+                                                                arbitrary[String],
+                                                                arbitrary[String]) { (a, b, c) =>
+    def fa = string(a)
+
+    val g = map2(fa, point(b))((x, y) => x)
+
+    parser.run(g)(c) shouldBe parser.run(fa)(c)
+  }
 }
