@@ -11,6 +11,7 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   private val parser = MyParser.IteratingParser
   import parser._
 
+  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
   private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 

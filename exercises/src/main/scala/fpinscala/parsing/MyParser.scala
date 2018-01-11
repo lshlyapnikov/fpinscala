@@ -36,17 +36,37 @@ object MyParser {
       }
     }
 
-    def count(c: Char): Parser[Int] = { location: Location =>
-      def loop(l: Location, acc: Int): (Location, Int) = {
-        if (!l.end && l.input.charAt(l.offset) == c) loop(l.advanceBy(1), acc + 1)
-        else (l, acc)
-      }
+    def many[A](p: Parser[A]): Parser[List[A]] = { location: Location =>
+      def loop(l0: Location, acc: List[A]): (Location, List[A]) =
+        p(l0) match {
+          case Right((l1, a)) => loop(l1, a :: acc)
+          case _              => (l0, acc)
+        }
 
-      Right(loop(location, 0))
+      val r = loop(location, Nil)
+      Right((r._1, r._2.reverse))
     }
+
+    def count(c: Char): Parser[Int] = map(many(char(c)))(as => as.length)
+
+//    def count(c: Char): Parser[Int] = { location: Location =>
+//      def loop(l: Location, acc: Int): (Location, Int) = {
+//        if (!l.end && l.input.charAt(l.offset) == c) loop(l.advanceBy(1), acc + 1)
+//        else (l, acc)
+//      }
+//
+//      Right(loop(location, 0))
+//    }
 
     override def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] =
       sequence(List.fill(n)(p))
+
+    def map[A, B](p: Parser[A])(f: A => B): Parser[B] = { location0: Location =>
+      p(location0).map {
+        case (location1, a) =>
+          (location1, f(a))
+      }
+    }
 
     // forall a b. map2(point(a), point(b))((_, _)) = point((a, b))
     // forall a fb. map2(point(a), fb)((x, y) => y) = fb
