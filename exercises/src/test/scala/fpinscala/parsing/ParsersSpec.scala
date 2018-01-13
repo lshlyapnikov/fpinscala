@@ -2,18 +2,19 @@ package fpinscala.parsing
 
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen.chooseNum
-import org.scalacheck.Shrink
+import org.scalacheck.{Gen, Shrink}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FreeSpec, Matchers}
 
 class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
   private val parser = MyParser.IteratingParser
+
   import parser._
 
-  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
+  private implicit val noCharShrink: Shrink[Char] = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
-  private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
+  private implicit val noIntShrink: Shrink[Int] = Shrink.shrinkAny[Int]
 
   "exact string" in forAll(nonEmptyString) { a =>
     parser.run(string(a))(a) shouldBe Right(a)
@@ -70,8 +71,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall a b. map2(point(a), point(b))((_, _)) = point((a, b))" in forAll(nonEmptyString,
-                                                                           nonEmptyString,
-                                                                           nonEmptyString) {
+    nonEmptyString,
+    nonEmptyString) {
     (a, b, c) =>
       val f = map2(point(a), point(b))((_, _))
       val g = point((a, b))
@@ -83,8 +84,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall a fb. map2(point(a), fb)((x, y) => y) = fb" in forAll(nonEmptyString,
-                                                                nonEmptyString,
-                                                                nonEmptyString) { (a, b, c) =>
+    nonEmptyString,
+    nonEmptyString) { (a, b, c) =>
     def fb = string(b)
 
     val g = map2(point(a), fb)((x, y) => y)
@@ -93,8 +94,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall fa b. map2(fa, point(b))((x, y) => x) = fa" in forAll(nonEmptyString,
-                                                                nonEmptyString,
-                                                                nonEmptyString) { (a, b, c) =>
+    nonEmptyString,
+    nonEmptyString) { (a, b, c) =>
     def fa = string(a)
 
     val g = map2(fa, point(b))((x, y) => x)
@@ -137,6 +138,10 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
     (a, b, n) =>
       val str = a + b * n
       parser.run(product(string(a), count(b)))(str) shouldBe Right((a, n))
+  }
+
+  "forall xs. traverse(xs)(point) = point(xs)" in forAll(Gen.listOf(nonEmptyString), nonEmptyString) { (xs, input) =>
+    parser.run(traverse(xs)(point))(input) shouldBe parser.run(point(xs))(input)
   }
 
   def nonEmptyString = arbitrary[String].filter(_.nonEmpty)
