@@ -103,9 +103,14 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
     parser.run(g)(c) shouldBe parser.run(fa)(c)
   }
 
-  "many" in forAll(nonEmptyString, chooseNum(1, 10)) { (s, n) =>
+  "many" in forAll(nonEmptyString, chooseNum(0, 10)) { (s, n) =>
     val input = s * n
     parser.run(many(string(s)))(input) shouldBe Right(List.fill(n)(s))
+  }
+
+  "many1" in forAll(nonEmptyString, chooseNum(1, 10)) { (s, n) =>
+    val input = s * n
+    parser.run(many1(string(s)))(input) shouldBe Right(List.fill(n)(s))
   }
 
   "count char" in forAll(arbitrary[Char], chooseNum[Int](1, 10)) { (c, n) =>

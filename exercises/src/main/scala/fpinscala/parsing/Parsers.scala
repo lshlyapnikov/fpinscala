@@ -33,6 +33,12 @@ trait Parsers[Parser[+ _]] {
     or(r, point(List.empty[A]))
   }
 
+  def many1[A](p: Parser[A]): Parser[List[A]] = {
+    val p1: Parser[List[A]] = p.map(x => List(x))
+    val r: Parser[List[A]] = map2(p, many(p))((a, as) => a :: as)
+    or(r, p1)
+  }
+
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A]
 
   def char(c: Char): Parser[Char] = map(string(c.toString))(_.charAt(0))
