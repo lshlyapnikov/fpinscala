@@ -6,7 +6,8 @@ import fpinscala.parsing.MyParser.Parser
 import language.higherKinds
 import scala.util.matching.Regex
 
-trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of trait
+trait Parsers[Parser[+ _]] {
+  self => // so inner classes may call methods of trait
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
@@ -35,6 +36,12 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
     or(r, point(List.empty[A]))
   }
 
+  def many1[A](p: Parser[A]): Parser[List[A]] = {
+    val p1: Parser[List[A]] = p.map(x => List(x))
+    val r: Parser[List[A]] = map2(p, many(p))((a, as) => a :: as)
+    or(r, p1)
+  }
+
   def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A]
 
   def char(c: Char): Parser[Char] = map(string(c.toString))(_.charAt(0))
@@ -44,9 +51,9 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
   def regex(r: Regex): Parser[String]
 
   def traverse[A, B](pas: List[A])(f: A => Parser[B]): Parser[List[B]] = {
-    val z: Parser[List[B]]   = point(List.empty[B])
+    val z: Parser[List[B]] = point(List.empty[B])
     val pbs: List[Parser[B]] = pas.map(a => f(a))
-    pbs.foldLeft(z) { (acc, p) =>
+    pbs.foldRight(z) { (p, acc) =>
       map2(p, acc)((b, bs) => b :: bs)
     }
   }
@@ -74,21 +81,27 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
   def token[A](p: Parser[A]): Parser[A] = skipR(p, whitespaces)
 
   case class ParserOps[A](pa: Parser[A]) {
-    def or[B >: A](pb: => Parser[B]): Parser[B]                 = self.or(pa, pb)
-    def |[B >: A](pb: => Parser[B]): Parser[B]                  = self.or(pa, pb)
-    def map[B](f: A => B): Parser[B]                            = self.map(pa)(f)
-    def flatMap[B](f: A => Parser[B]): Parser[B]                = self.flatMap(pa)(f)
+    def or[B >: A](pb: => Parser[B]): Parser[B] = self.or(pa, pb)
+
+    def |[B >: A](pb: => Parser[B]): Parser[B] = self.or(pa, pb)
+
+    def map[B](f: A => B): Parser[B] = self.map(pa)(f)
+
+    def flatMap[B](f: A => Parser[B]): Parser[B] = self.flatMap(pa)(f)
+
     def map2[B, C](pb: => Parser[B])(f: (A, B) => C): Parser[C] = self.map2(pa, pb)(f)
-    def product[B](pb: => Parser[B]): Parser[(A, B)]            = self.product(pa, pb)
+
+    def product[B](pb: => Parser[B]): Parser[(A, B)] = self.product(pa, pb)
   }
 
   object Laws {}
+
 }
 
 case class Location(input: String, offset: Int = 0) {
 
   lazy val line = input.slice(0, offset + 1).count(_ == '\n') + 1
-  lazy val col  = input.slice(0, offset + 1).reverse.indexOf('\n')
+  lazy val col = input.slice(0, offset + 1).reverse.indexOf('\n')
 
   def toError(msg: String): ParseError =
     ParseError(List((this, msg)))
