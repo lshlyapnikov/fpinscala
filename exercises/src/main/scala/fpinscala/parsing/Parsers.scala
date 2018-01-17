@@ -49,7 +49,6 @@ trait Parsers[Parser[+ _]] {
 
   def sequence[A](pas: List[Parser[A]]): Parser[List[A]] = traverse(pas)(identity)
 
-  // TODO: why do I need reverse here?
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = sequence(List.fill(n)(p))
 
   def product[A, B](pa: => Parser[A], pb: => Parser[B]): Parser[(A, B)] =
