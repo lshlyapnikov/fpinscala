@@ -42,15 +42,15 @@ trait Parsers[Parser[+ _]] {
   def traverse[A, B](pas: List[A])(f: A => Parser[B]): Parser[List[B]] = {
     val z: Parser[List[B]] = point(List.empty[B])
     val pbs: List[Parser[B]] = pas.map(a => f(a))
-    pbs.foldLeft(z) { (acc, p) =>
+    pbs.foldRight(z) { (p, acc) =>
       map2(p, acc)((b, bs) => b :: bs)
-    }.map(_.reverse)
+    }
   }
 
   def sequence[A](pas: List[Parser[A]]): Parser[List[A]] = traverse(pas)(identity)
 
   // TODO: why do I need reverse here?
-  def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = sequence(List.fill(n)(p)).map(_.reverse)
+  def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] = sequence(List.fill(n)(p))
 
   def product[A, B](pa: => Parser[A], pb: => Parser[B]): Parser[(A, B)] =
     map2(pa, pb)((x, y) => (x, y))

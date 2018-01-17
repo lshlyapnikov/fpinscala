@@ -1,7 +1,7 @@
 package fpinscala.parsing
 
 import org.scalacheck.Arbitrary.arbitrary
-import org.scalacheck.Gen.chooseNum
+import org.scalacheck.Gen.{chooseNum, listOf}
 import org.scalacheck.{Gen, Shrink}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FreeSpec, Matchers}
@@ -140,8 +140,15 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       parser.run(product(string(a), count(b)))(str) shouldBe Right((a, n))
   }
 
-  "forall xs. traverse(xs)(point) = point(xs)" in forAll(Gen.listOf(nonEmptyString), nonEmptyString) { (xs, input) =>
+  "forall xs. traverse(xs)(point) = point(xs)" in forAll(listOf(nonEmptyString), nonEmptyString) { (xs, input) =>
     parser.run(traverse(xs)(point))(input) shouldBe parser.run(point(xs))(input)
+  }
+
+  "more checks" in forAll(Gen.oneOf("ab", "ba")) { input =>
+    val p1 = map2(char('a'), char('b'))((_, _) => ())
+    val p2 = map(sequence(List(char('a'), char('b'))))(_ => ())
+
+    parser.run(p1)(input) shouldBe parser.run(p2)(input)
   }
 
   def nonEmptyString = arbitrary[String].filter(_.nonEmpty)
