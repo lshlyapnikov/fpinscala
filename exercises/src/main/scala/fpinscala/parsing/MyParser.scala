@@ -1,5 +1,7 @@
 package fpinscala.parsing
 
+import scala.util.matching.Regex
+
 object MyParser {
 
   type Parser[+A] = Location => Either[ParseError, (Location, A)]
@@ -22,6 +24,14 @@ object MyParser {
         val result: String = location.input.substring(location.offset, location.offset + length)
         if (result == s) point(result)(location.advanceBy(length))
         else Left(location.toError(s))
+      }
+    }
+
+    override def regex(r: Regex): Parser[String] = l0 => {
+      val str = l0.input.substring(l0.offset)
+      r.findFirstIn(str) match {
+        case Some(x) => Right((l0.advanceBy(x.length), x))
+        case None    => Left(l0.toError(s"regex: $r"))
       }
     }
 
@@ -48,8 +58,16 @@ object MyParser {
     override def flatten[A](ppa: Parser[Parser[A]]): Parser[A] =
       l0 => ppa(l0).flatMap { case (l1, pa) => pa(l1) }
 
-    override def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
-      l0 => p(l0).map { case (location1, a) => (location1, f(a)) }
+//    override def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
+//      l0 => p(l0).map { case (location1, a) => (location1, f(a)) }
+
+    override def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] =
+      l0 => {
+        pa(l0) match {
+          case Right((l1, a)) => f(a)(l1)
+          case Left(e)        => Left(e)
+        }
+      }
 
     // forall a b. map2(point(a), point(b))((_, _)) = point((a, b))
     // forall a fb. map2(point(a), fb)((x, y) => y) = fb

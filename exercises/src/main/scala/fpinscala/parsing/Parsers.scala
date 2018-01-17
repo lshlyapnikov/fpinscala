@@ -4,6 +4,7 @@ import fpinscala.parsing.MyParser.IteratingParser.{char, many, map, map2, or, po
 import fpinscala.parsing.MyParser.Parser
 
 import language.higherKinds
+import scala.util.matching.Regex
 
 trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of trait
 
@@ -15,9 +16,11 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
 
   def flatten[A](ppa: Parser[Parser[A]]): Parser[A]
 
-  def map[A, B](pa: Parser[A])(f: A => B): Parser[B]
+  def map[A, B](pa: Parser[A])(f: A => B): Parser[B] = flatMap(pa)(a => point(f(a)))
 
-  def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] = flatten(map(pa)(f))
+  def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B]
+
+//  def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] = flatten(map(pa)(f))
 
   def point[A](a: A): Parser[A]
 
@@ -38,6 +41,8 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
 
   def string(s: String): Parser[String]
 
+  def regex(r: Regex): Parser[String]
+
   def traverse[A, B](pas: List[A])(f: A => Parser[B]): Parser[List[B]] = {
     val z: Parser[List[B]]   = point(List.empty[B])
     val pbs: List[Parser[B]] = pas.map(a => f(a))
@@ -56,6 +61,17 @@ trait Parsers[Parser[+ _]] { self => // so inner classes may call methods of tra
   def count(str: String): Parser[Int] = map(many(string(str)))(_.length)
 
   def count(c: Char): Parser[Int] = slice(many(char(c))).map(_.length)
+
+  val whitespace  = regex("[ \r\n\t]".r)
+  val whitespaces = slice(many(whitespace))
+
+  def skipL[B](pa: Parser[Any], pb: Parser[B]): Parser[B] =
+    map2(pa, pb)((_, b) => b)
+
+  def skipR[A](pa: Parser[A], pb: Parser[Any]): Parser[A] =
+    map2(pa, pb)((a, _) => a)
+
+  def token[A](p: Parser[A]): Parser[A] = skipR(p, whitespaces)
 
   case class ParserOps[A](pa: Parser[A]) {
     def or[B >: A](pb: => Parser[B]): Parser[B]                 = self.or(pa, pb)
