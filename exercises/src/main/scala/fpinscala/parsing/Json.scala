@@ -4,27 +4,37 @@ trait Json
 
 object Json {
 
-  case object JNull                          extends Json
-  case class JNumber(get: Double)            extends Json
-  case class JString(get: String)            extends Json
-  case class JBool(get: Boolean)             extends Json
-  case class JArray(get: IndexedSeq[Json])   extends Json
+  case object JNull extends Json
+
+  case class JNumber(get: Double) extends Json
+
+  case class JString(get: String) extends Json
+
+  case class JBool(get: Boolean) extends Json
+
+  case class JArray(get: IndexedSeq[Json]) extends Json
+
   case class JObject(get: Map[String, Json]) extends Json
 
   def jsonParser[Parser[+ _]](P: Parsers[Parser]): Parser[Json] = {
     import P._
 
-    val identifier = regex("[A-Za-z][0-9A-Za-z\\_]*".r)
-    val colon      = char(':')
-    val semicolon  = char(';')
-    val comma      = char(',')
-    val quote      = char('"')
+    val identifier = regex("""[A-Za-z][0-9A-Za-z_]*""".r)
+    val value = regex("""[^"]*""".r)
 
-    val propertyName = skipL(quote, skipR(identifier, quote))
+    val colon = char(':')
+    val semicolon = char(';')
+    val comma = char(',')
+    val quote = char('"')
 
-    val stringValue = skipL(quote,
+    val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
+    val fieldValue: Parser[Json] = token(skipLnR(quote, value.map(JString), quote))
+    val field: Parser[(String, Json)] = for {
+      k <- fieldName
+      _ <- token(colon)
+      v <- fieldValue
+    } yield (k, v)
 
-//    val jObject = product(token(char('{')
-    ???
+    field.map(kv => JObject(Seq(kv).toMap))
   }
 }

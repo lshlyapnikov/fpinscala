@@ -21,7 +21,7 @@ trait Parsers[Parser[+ _]] {
 
   def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B]
 
-//  def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] = flatten(map(pa)(f))
+  //  def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] = flatten(map(pa)(f))
 
   def point[A](a: A): Parser[A]
 
@@ -69,7 +69,7 @@ trait Parsers[Parser[+ _]] {
 
   def count(c: Char): Parser[Int] = slice(many(char(c))).map(_.length)
 
-  val whitespace  = regex("[ \r\n\t]".r)
+  val whitespace = regex("[ \r\n\t]".r)
   val whitespaces = slice(many(whitespace))
 
   def skipL[B](pa: Parser[Any], pb: Parser[B]): Parser[B] =
@@ -77,6 +77,9 @@ trait Parsers[Parser[+ _]] {
 
   def skipR[A](pa: Parser[A], pb: Parser[Any]): Parser[A] =
     map2(pa, pb)((a, _) => a)
+
+  def skipLnR[B](pa: Parser[Any], pb: Parser[B], pc: Parser[Any]): Parser[B] =
+    (pa skipL pb) skipR pc
 
   def token[A](p: Parser[A]): Parser[A] = skipR(p, whitespaces)
 
@@ -92,6 +95,10 @@ trait Parsers[Parser[+ _]] {
     def map2[B, C](pb: => Parser[B])(f: (A, B) => C): Parser[C] = self.map2(pa, pb)(f)
 
     def product[B](pb: => Parser[B]): Parser[(A, B)] = self.product(pa, pb)
+
+    def skipL[B](pb: Parser[B]): Parser[B] = self.skipL(pa, pb)
+
+    def skipR(pb: Parser[Any]): Parser[A] = self.skipR(pa, pb)
   }
 
   object Laws {}
