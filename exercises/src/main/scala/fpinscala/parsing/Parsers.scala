@@ -75,10 +75,10 @@ trait Parsers[Parser[+ _]] {
   def skipL[B](pa: Parser[Any], pb: Parser[B]): Parser[B] =
     map2(pa, pb)((_, b) => b)
 
-  def skipR[A](pa: Parser[A], pb: Parser[Any]): Parser[A] =
+  def skipR[A](pa: Parser[A], pb: => Parser[Any]): Parser[A] =
     map2(pa, pb)((a, _) => a)
 
-  def skipLnR[B](pa: Parser[Any], pb: Parser[B], pc: Parser[Any]): Parser[B] =
+  def skipLnR[B](pa: Parser[Any], pb: => Parser[B], pc: Parser[Any]): Parser[B] =
     (pa skipL pb) skipR pc
 
   def token[A](p: Parser[A]): Parser[A] = skipR(p, whitespaces)

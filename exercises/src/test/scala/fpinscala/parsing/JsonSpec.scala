@@ -7,21 +7,38 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
-  private implicit val noCharShrink: Shrink[Char] = Shrink.shrinkAny[Char]
+  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
-  private implicit val noIntShrink: Shrink[Int] = Shrink.shrinkAny[Int]
+  private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 
   private val p: Parsers[Parser] = MyParser.IteratingParser
 
+  import p._
   import Json._
 
   private val j = jsonParser(p)
 
-  "identifier" in forAll(Gen.identifier, Gen.identifier) { (id, value) =>
-    val input = s""""$id" : "$value" """
+  "identifier" in forAll(Gen.identifier, Gen.identifier) { (id, str) =>
+    val input = s""""$id" : "$str""""
 
-    p.run(j)(input) shouldBe Right(JObject(Map(id -> JString(value))))
+//    p.run(j)(input) shouldBe Right(JObject(Map(id -> JString(value))))
+
+    val identifier = p.regex("""[A-Za-z][0-9A-Za-z_]*""".r)
+    val value = p.regex("""[^"\r\n]*""".r)
+
+    val colon = p.char(':')
+    val semicolon = p.char(';')
+    val comma = p.char(',')
+    val quote = p.char('"')
+
+    val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
+    val fieldDelim: Parser[Char] = token(colon)
+    val fieldValue: Parser[String] = token(skipLnR(quote, value, quote))
+
+    val field: Parser[(String, Char)] = product(fieldName, fieldDelim)
+
+    val r = p.run(field)(input)
+    println(s"$input => $r")
   }
-
 
 }

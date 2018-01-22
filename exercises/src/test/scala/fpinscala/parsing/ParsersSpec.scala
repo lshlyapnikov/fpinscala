@@ -13,9 +13,9 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
 
   import p._
 
-  private implicit val noCharShrink: Shrink[Char] = Shrink.shrinkAny[Char]
+  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
-  private implicit val noIntShrink: Shrink[Int] = Shrink.shrinkAny[Int]
+  private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 
   "exact string" in forAll(nonEmptyStringGen) { a =>
     p.run(string(a))(a) shouldBe Right(a)
@@ -71,8 +71,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall a b. map2(point(a), point(b))((_, _)) = point((a, b))" in forAll(nonEmptyStringGen,
-    nonEmptyStringGen,
-    nonEmptyStringGen) {
+                                                                           nonEmptyStringGen,
+                                                                           nonEmptyStringGen) {
     (a, b, c) =>
       val f = map2(point(a), point(b))((_, _))
       val g = point((a, b))
@@ -84,8 +84,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall a fb. map2(point(a), fb)((x, y) => y) = fb" in forAll(nonEmptyStringGen,
-    nonEmptyStringGen,
-    nonEmptyStringGen) { (a, b, c) =>
+                                                                nonEmptyStringGen,
+                                                                nonEmptyStringGen) { (a, b, c) =>
     def fb = string(b)
 
     val g = map2(point(a), fb)((x, y) => y)
@@ -94,8 +94,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall fa b. map2(fa, point(b))((x, y) => x) = fa" in forAll(nonEmptyStringGen,
-    nonEmptyStringGen,
-    nonEmptyStringGen) { (a, b, c) =>
+                                                                nonEmptyStringGen,
+                                                                nonEmptyStringGen) { (a, b, c) =>
     def fa = string(a)
 
     val g = map2(fa, point(b))((x, y) => x)
@@ -129,8 +129,8 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "forall a b. product(point(a), point(b)) == point((a, b))" in forAll(nonEmptyStringGen,
-    nonEmptyStringGen,
-    nonEmptyStringGen) {
+                                                                       nonEmptyStringGen,
+                                                                       nonEmptyStringGen) {
     (a, b, c) =>
       p.run(product(point(a), point(b)))(c) shouldBe
         p.run(point((a, b)))(c)
@@ -149,7 +149,7 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
 
   "context sensitivity" in forAll(chooseNum[Int](0, 10), arbitrary[Char]) { (a, c) =>
     val str: String = List.fill(a)(c).mkString
-    val input = s"$a$str"
+    val input       = s"$a$str"
 
     val pCharList: Parser[List[Char]] = p.regex("\\d+".r).flatMap { s =>
       val n: Int = s.toInt
@@ -175,8 +175,20 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
   }
 
   "token" in forAll(Gen.identifier, whitespacesGen) { (id, ws) =>
-    val input: String = s""""$id"1!!!!!$ws""" // TODO this should be failing
+    val input: String = s""""$id"$ws"""
     p.run(token(skipLnR(char('"'), p.regex("[A-Za-z0-9]*".r), char('"'))))(input) shouldBe Right(id)
+  }
+
+  "token 2" in forAll(Gen.identifier, whitespacesGen, Gen.identifier) { (id1, ws, id2) =>
+    val input: String = s""""$id1"$ws"$id2""""
+    val valueP        = token(skipLnR(char('"'), p.regex("""[^"]*""".r), char('"')))
+    p.run(product(valueP, valueP))(input) shouldBe Right((id1, id2))
+  }
+
+  "token 3" in forAll(whitespacesGen, Gen.identifier) { (ws, id) =>
+    val input: String                  = s":$ws$id"
+    val valueP: Parser[(Char, String)] = product(token(p.char(':')), token(p.regex("""[^"]*""".r)))
+    p.run(valueP)(input) shouldBe Right((':', id))
   }
 
   def nonEmptyStringGen: Gen[String] = arbitrary[String].filter(_.nonEmpty)
