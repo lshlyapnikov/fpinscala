@@ -59,7 +59,7 @@ object MyParser {
       l0 => {
         pa(l0) match {
           case Right((l1, a)) => f(a)(l1)
-          case Left(e)        => Left(e)
+          case Left(e)        => Left(l0.toError("flatMap", e))
         }
       }
 
