@@ -55,11 +55,11 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
     p.run(string(a) or string(b))(b) shouldBe Right(b)
   }
 
-  "or with one arg empty" in forAll(nonEmptyStringGen) { a =>
-    p.run(string("") or string(a))("") shouldBe Left(Location("").toError(a))
-    p.run(string("") or string(a))(a) shouldBe Right(a)
-    p.run(string(a) or string(""))("") shouldBe Left(Location("").toError(""))
-    p.run(string(a) or string(""))(a) shouldBe Right(a)
+  "or with one empty arg" in forAll(nonEmptyStringGen) { a =>
+    p.run2(string("") or string(a))("") shouldBe Right((Location(""), ""))
+    p.run2(string("") or string(a))(a) shouldBe Right((Location(a), ""))
+    p.run2(string(a) or string(""))("") shouldBe Right((Location(""), ""))
+    p.run2(string(a) or string(""))(a) shouldBe Right((Location(a, a.length), a))
   }
 
   "listOfN or " in {
@@ -88,7 +88,7 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
                                                                 nonEmptyStringGen) { (a, b, c) =>
     def fb = string(b)
 
-    val g = map2(point(a), fb)((x, y) => y)
+    val g = map2(point(a), fb)((_, y) => y)
 
     p.run(g)(c) shouldBe p.run(fb)(c)
   }
@@ -176,24 +176,64 @@ class ParsersSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
 
   "token" in forAll(Gen.identifier, whitespacesGen) { (id, ws) =>
     val input: String = s""""$id"$ws"""
-    p.run(token(skipLnR(char('"'), p.regex("[A-Za-z0-9]*".r), char('"'))))(input) shouldBe Right(id)
+    val parser        = token(skipLnR(char('"'), p.regex("""\w+""".r), char('"')))
+    p.run2(parser)(input) shouldBe Right((Location(input, input.length), id))
   }
 
   "token 2" in forAll(Gen.identifier, whitespacesGen, Gen.identifier) { (id1, ws, id2) =>
     val input: String = s""""$id1"$ws"$id2""""
-    val valueP        = token(skipLnR(char('"'), p.regex("""[^"]*""".r), char('"')))
-    p.run(product(valueP, valueP))(input) shouldBe Right((id1, id2))
+    val parser        = token(skipLnR(char('"'), p.regex("""[^"]*""".r), char('"')))
+    p.run2(product(parser, parser))(input) shouldBe
+      Right((Location(input, input.length), (id1, id2)))
   }
 
-  "token 3" in forAll(whitespacesGen, Gen.identifier) { (ws, id) =>
-    val input: String                  = s":$ws$id"
-    val valueP: Parser[(Char, String)] = product(token(p.char(':')), token(p.regex("""[^"]*""".r)))
-    p.run(valueP)(input) shouldBe Right((':', id))
+  "token 3" in forAll(Gen.identifier,
+                      whitespacesGen,
+                      whitespacesGen,
+                      Gen.identifier,
+                      whitespacesGen) { (id1, ws1, ws2, id2, ws3) =>
+    val input: String = s"$id1$ws1:$ws2$id2$ws3"
+
+    println(s"------- input: <$input>")
+
+//    val idP    = token(p.regex("""[^" \r\n]*""".r))
+    val idP    = token(p.regex("""\w+""".r))
+    val colonP = token(p.char(':'))
+    val valueP = for {
+      a <- idP
+      b <- colonP
+      c <- idP
+    } yield (a, b, c)
+
+    val r: Either[ParseError, (Location, (String, Char, String))] = p.run2(valueP)(input)
+    r shouldBe Right((Location(input, input.length), (id1, ':', id2)))
+  }
+
+  "token 4" in {
+    val id1           = "x"
+    val input: String = s"$id1 : "
+    println(s"------- input: '$input'")
+
+    val idP = token(p.regex("""\w+""".r)).map(dump)
+    val colonP = token(p.char(':')).map(dump)
+    val valueP = for {
+      a <- idP
+      b <- colonP
+    } yield (a, b)
+
+    val r: Either[ParseError, (Location, (String, Char))] = p.run2(valueP)(input)
+    r shouldBe Right((Location(input, input.length), (id1, ':')))
+  }
+
+  private def dump[A](a: A): A = {
+    println(s"-- dump: '$a'")
+    a
   }
 
   def nonEmptyStringGen: Gen[String] = arbitrary[String].filter(_.nonEmpty)
 
   def whitespacesGen: Gen[String] = Gen.sized { n =>
+//    Gen.listOfN(n, Gen.const(' ')).map(_.mkString)
     Gen.listOfN(n, Gen.oneOf(' ', '\n', '\r', '\t')).map(_.mkString)
   }
 }

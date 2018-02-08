@@ -7,9 +7,9 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
-  private implicit val noCharShrink: Shrink[Char] = Shrink.shrinkAny[Char]
+  private implicit val noCharShrink: Shrink[Char]     = Shrink.shrinkAny[Char]
   private implicit val noStringShrink: Shrink[String] = Shrink.shrinkAny[String]
-  private implicit val noIntShrink: Shrink[Int] = Shrink.shrinkAny[Int]
+  private implicit val noIntShrink: Shrink[Int]       = Shrink.shrinkAny[Int]
 
   private val p: Parsers[Parser] = MyParser.IteratingParser
 
@@ -19,21 +19,21 @@ class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
   private val j = jsonParser(p)
 
   "identifier" in forAll(Gen.identifier, Gen.identifier) { (id, str) =>
-    val input = s""""$id"    : "$str"    """
+    val input = s""""$id" : "$str""""
 
     //    p.run(j)(input) shouldBe Right(JObject(Map(id -> JString(value))))
 
     val identifier = p.regex("""[A-Za-z][0-9A-Za-z_]*""".r)
-    val value = p.regex("""[^"\r\n]*""".r)
+    val value      = p.regex("""[^"\r\n]*""".r)
 
-    val colon = p.char(':')
+    val colon     = p.char(':')
     val semicolon = p.char(';')
-    val comma = p.char(',')
-    val quote = p.char('"')
+    val comma     = p.char(',')
+    val quote     = p.char('"')
 
     val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
-    val fieldDelim: Parser[Char] = token(colon)
-    val fieldValue: Parser[Json] = token(skipLnR(quote, value.map(JString), quote))
+    val fieldDelim: Parser[Char]  = token(colon)
+    val fieldValue: Parser[Json]  = token(skipLnR(quote, value.map(JString), quote))
 
     val field: Parser[(String, Json)] = for {
       k <- fieldName
@@ -41,9 +41,9 @@ class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
       v <- fieldValue
     } yield (k, v)
 
-    val r = p.run(field)(input)
+    val r = p.run2(field)(input)
     println(s"$input => $r")
-    r shouldBe Right((id, JString(str)))
+    r shouldBe Right((Location(input, input.length), (id, JString(str))))
   }
 
 }

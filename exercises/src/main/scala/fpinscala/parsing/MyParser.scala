@@ -8,36 +8,43 @@ object MyParser {
 
   object IteratingParser extends Parsers[Parser] {
     override def run[A](p: Parser[A])(input: String): Either[ParseError, A] =
-      p(Location(input)).map(t => t._2)
+      run2(p)(input).map(t => t._2)
 
-    //    override def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A] = location => {
-    //      val a = p1(location)
-    //      if (a.isRight) a
-    //      else p2(location)
-    //    }
+    override def run2[A](p: Parser[A])(input: String): Either[ParseError, (Location, A)] =
+      p(Location(input))
 
     def or[A](pa: Parser[A], pb: => Parser[A]): Parser[A] =
-      location => pa(location) match {
-        case Left(_) => pb(location)
-        case r@_ => r // committed failure or success skips running `p2`
+      location =>
+        pa(location) match {
+          case Left(_) => pb(location)
+          case r @ _   => r // committed failure or success skips running `p2`
       }
 
     override def string(s: String): Parser[String] = { location: Location =>
       val length = s.length()
-      if (s.isEmpty || location.offset + length > location.input.length)
+
+      if (s.isEmpty)
+        Right((location, s))
+      else if (location.offset + length > location.input.length)
         Left(location.toError(s))
       else {
         val result: String = location.input.substring(location.offset, location.offset + length)
-        if (result == s) point(result)(location.advanceBy(length))
+        if (result == s) Right((location.advanceBy(length), result))
         else Left(location.toError(s))
       }
     }
 
     override def regex(r: Regex): Parser[String] = l0 => {
-      val str = l0.input.substring(l0.offset)
-      r.findFirstIn(str) match {
-        case Some(x) => Right((l0.advanceBy(x.length), x))
-        case None    => Left(l0.toError(s"regex: $r"))
+      if (l0.end) Left(l0.toError(s"regex: $r"))
+      else {
+        val str = l0.input.substring(l0.offset)
+        r.findPrefixOf(str) match {
+          case Some(x) =>
+            println(s"$r matched: '$x'")
+            Right((l0.advanceBy(x.length), x))
+          case None    =>
+            Left(l0.toError(s"regex: $r"))
+        }
       }
     }
 
@@ -47,7 +54,7 @@ object MyParser {
           case (l1, _) =>
             val str = location0.input.substring(location0.offset, l1.offset)
             (l1, str)
-        }
+      }
 
     override def flatten[A](ppa: Parser[Parser[A]]): Parser[A] =
       l0 => ppa(l0).flatMap { case (l1, pa) => pa(l1) }
@@ -57,9 +64,10 @@ object MyParser {
 
     override def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] =
       l0 => {
+        println(s"--- $l0, '${l0.input.substring(l0.offset)}'")
         pa(l0) match {
           case Right((l1, a)) => f(a)(l1)
-          case Left(e)        => Left(l0.toError("flatMap", e))
+          case Left(e)        => Left(e) //Left(l0.toError("", e))
         }
       }
 

@@ -11,6 +11,8 @@ trait Parsers[Parser[+ _]] {
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
+  def run2[A](p: Parser[A])(input: String): Either[ParseError, (Location, A)]
+
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
 
   def slice[A](p: Parser[A]): Parser[String]
@@ -38,7 +40,7 @@ trait Parsers[Parser[+ _]] {
 
   def many1[A](p: Parser[A]): Parser[List[A]] = {
     val p1: Parser[List[A]] = p.map(x => List(x))
-    val r: Parser[List[A]] = map2(p, many(p))((a, as) => a :: as)
+    val r: Parser[List[A]]  = map2(p, many(p))((a, as) => a :: as)
     or(r, p1)
   }
 
@@ -51,7 +53,7 @@ trait Parsers[Parser[+ _]] {
   def regex(r: Regex): Parser[String]
 
   def traverse[A, B](pas: List[A])(f: A => Parser[B]): Parser[List[B]] = {
-    val z: Parser[List[B]] = point(List.empty[B])
+    val z: Parser[List[B]]   = point(List.empty[B])
     val pbs: List[Parser[B]] = pas.map(a => f(a))
     pbs.foldRight(z) { (p, acc) =>
       map2(p, acc)((b, bs) => b :: bs)
@@ -69,7 +71,7 @@ trait Parsers[Parser[+ _]] {
 
   def count(c: Char): Parser[Int] = slice(many(char(c))).map(_.length)
 
-  val whitespace = regex("[ \r\n\t]".r)
+  val whitespace  = regex("""\s""".r)
   val whitespaces = slice(many(whitespace))
 
   def skipL[B](pa: Parser[Any], pb: Parser[B]): Parser[B] =
@@ -108,7 +110,7 @@ trait Parsers[Parser[+ _]] {
 case class Location(input: String, offset: Int = 0) {
 
   lazy val line = input.slice(0, offset + 1).count(_ == '\n') + 1
-  lazy val col = input.slice(0, offset + 1).reverse.indexOf('\n')
+  lazy val col  = input.slice(0, offset + 1).reverse.indexOf('\n')
 
   def toError(msg: String): ParseError =
     ParseError(List((this, msg)))
