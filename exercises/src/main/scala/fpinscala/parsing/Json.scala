@@ -27,12 +27,18 @@ object Json {
     val comma = char(',')
     val quote = char('"')
 
+    val objBegin: Parser[Char] = token(char('{'))
+    val objEnd: Parser[Char] = token(char('}'))
     val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
-    val fieldValue: Parser[Json] = token(skipLnR(quote, value.map(JString), quote))
+    val fieldValue: Parser[Json] = token(
+      skipLnR(quote, value.map(JString), quote))
+
     val field: Parser[(String, Json)] = for {
+      _ <- objBegin
       k <- fieldName
       _ <- token(colon)
       v <- fieldValue
+      _ <- objEnd
     } yield (k, v)
 
     field.map(kv => JObject(Seq(kv).toMap))

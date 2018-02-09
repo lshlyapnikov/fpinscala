@@ -10,7 +10,8 @@ object MyParser {
     override def run[A](p: Parser[A])(input: String): Either[ParseError, A] =
       run2(p)(input).map(t => t._2)
 
-    override def run2[A](p: Parser[A])(input: String): Either[ParseError, (Location, A)] =
+    override def run2[A](p: Parser[A])(
+        input: String): Either[ParseError, (Location, A)] =
       p(Location(input))
 
     def or[A](pa: Parser[A], pb: => Parser[A]): Parser[A] =
@@ -28,7 +29,8 @@ object MyParser {
       else if (location.offset + length > location.input.length)
         Left(location.toError(s))
       else {
-        val result: String = location.input.substring(location.offset, location.offset + length)
+        val result: String =
+          location.input.substring(location.offset, location.offset + length)
         if (result == s) Right((location.advanceBy(length), result))
         else Left(location.toError(s))
       }
@@ -39,11 +41,8 @@ object MyParser {
       else {
         val str = l0.input.substring(l0.offset)
         r.findPrefixOf(str) match {
-          case Some(x) =>
-            println(s"$r matched: '$x'")
-            Right((l0.advanceBy(x.length), x))
-          case None    =>
-            Left(l0.toError(s"regex: $r"))
+          case Some(x) => Right((l0.advanceBy(x.length), x))
+          case None    => Left(l0.toError(s"regex: $r"))
         }
       }
     }
@@ -59,8 +58,8 @@ object MyParser {
     override def flatten[A](ppa: Parser[Parser[A]]): Parser[A] =
       l0 => ppa(l0).flatMap { case (l1, pa) => pa(l1) }
 
-//    override def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
-//      l0 => p(l0).map { case (location1, a) => (location1, f(a)) }
+    //    override def map[A, B](p: Parser[A])(f: A => B): Parser[B] =
+    //      l0 => p(l0).map { case (location1, a) => (location1, f(a)) }
 
     override def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] =
       l0 => {
@@ -76,4 +75,5 @@ object MyParser {
     // forall fa b. map2(fa, point(b))((x, y) => x) = fa
     override def point[A](a: A): Parser[A] = location => Right((location, a))
   }
+
 }
