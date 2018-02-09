@@ -20,27 +20,49 @@ object Json {
     import P._
 
     val identifier = regex("""[A-Za-z][0-9A-Za-z_]*""".r)
-    val value = regex("""[^"]*""".r)
+    val value      = regex("""[^"]+""".r)
+    val number     = regex("[0-9]+".r)
 
     val colon = char(':')
-    val semicolon = char(';')
     val comma = char(',')
     val quote = char('"')
 
-    val objBegin: Parser[Char] = token(char('{'))
-    val objEnd: Parser[Char] = token(char('}'))
+    val objBegin: Parser[Char]    = token(char('{'))
+    val objEnd: Parser[Char]      = token(char('}'))
     val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
-    val fieldValue: Parser[Json] = token(
-      skipLnR(quote, value.map(JString), quote))
+    val strValue: Parser[Json]    = token(skipLnR(quote, value, quote)).map(JString)
+    val numValue: Parser[Json]    = token(number).map(x => JNumber(x.toDouble))
+    val boolValue: Parser[Json] =
+      token(or(string("true"), string("false"))).map(x => JBool(x.toBoolean))
 
-    val field: Parser[(String, Json)] = for {
-      _ <- objBegin
+    val fieldValue: Parser[Json] = or(strValue, or(numValue, boolValue))
+
+    val oneJsonField: Parser[(String, Json)] = for {
       k <- fieldName
       _ <- token(colon)
       v <- fieldValue
-      _ <- objEnd
     } yield (k, v)
 
-    field.map(kv => JObject(Seq(kv).toMap))
+    val jsonFields: Parser[List[(String, Json)]] =
+      or(map2(oneJsonField, many(skipL(token(comma), oneJsonField)))(_ :: _),
+         oneJsonField.map(List(_)))
+
+    val jsonObj = for {
+      _  <- objBegin
+      fs <- jsonFields
+      _  <- objEnd
+    } yield JObject(fs.toMap)
+
+    val emptyObj = for {
+      _ <- objBegin
+      _ <- objEnd
+    } yield JObject(Map.empty)
+
+    or(jsonObj, emptyObj)
+  }
+
+  private def dump[A](a: A): A = {
+    println(s"-- dump: '$a'")
+    a
   }
 }

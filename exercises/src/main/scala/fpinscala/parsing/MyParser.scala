@@ -10,8 +10,7 @@ object MyParser {
     override def run[A](p: Parser[A])(input: String): Either[ParseError, A] =
       run2(p)(input).map(t => t._2)
 
-    override def run2[A](p: Parser[A])(
-        input: String): Either[ParseError, (Location, A)] =
+    override def run2[A](p: Parser[A])(input: String): Either[ParseError, (Location, A)] =
       p(Location(input))
 
     def or[A](pa: Parser[A], pb: => Parser[A]): Parser[A] =
@@ -63,7 +62,7 @@ object MyParser {
 
     override def flatMap[A, B](pa: Parser[A])(f: A => Parser[B]): Parser[B] =
       l0 => {
-        println(s"--- $l0, '${l0.input.substring(l0.offset)}'")
+//        println(s"--- $l0, '${l0.input.substring(l0.offset)}'")
         pa(l0) match {
           case Right((l1, a)) => f(a)(l1)
           case Left(e)        => Left(e) //Left(l0.toError("", e))
