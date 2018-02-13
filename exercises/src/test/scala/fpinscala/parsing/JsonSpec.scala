@@ -1,10 +1,10 @@
 package fpinscala.parsing
 
+import fpinscala.parsing.Generators._
 import fpinscala.parsing.MyParser.Parser
-import org.scalacheck.{Gen, Shrink}
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalacheck.Shrink
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import Generators._
+import org.scalatest.{FreeSpec, Matchers}
 
 class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
@@ -18,7 +18,8 @@ class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
 
   private val j = jsonParser(p)
 
-  implicit override val generatorDrivenConfig = PropertyCheckConfig(maxSize = 10)
+  implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
+    PropertyCheckConfiguration(sizeRange = 10)
 
   "plain object with one field" in forAll(jsonFieldGen) {
     case (input: String, id: String, str: String) =>
@@ -49,4 +50,24 @@ class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
       p.run(j)(input) shouldBe Right(JObject(jsonFields))
   }
 
+  "object with multiple fields of different types" in {
+    val input =
+      """{"a": 123.45,
+        |"b" : 6789,
+        |"c" : "abcd",
+        | "dtrue": true,
+        |  "dfalse" :false
+        | }""".stripMargin
+
+    p.run(j)(input) shouldBe Right(
+      JObject(
+        Map(
+          "a"      -> JNumber(123.45d),
+          "b"      -> JNumber(6789.0d),
+          "c"      -> JString("abcd"),
+          "dtrue"  -> JBool(true),
+          "dfalse" -> JBool(false)
+        )))
+
+  }
 }

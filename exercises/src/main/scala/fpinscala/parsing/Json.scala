@@ -21,7 +21,7 @@ object Json {
 
     val identifier = regex("""[A-Za-z][0-9A-Za-z_]*""".r)
     val value      = regex("""[^"]+""".r)
-    val number     = regex("[0-9]+".r)
+    val number     = regex("""[0-9]+(\.[0-9]+)?""".r)
 
     val colon = char(':')
     val comma = char(',')
