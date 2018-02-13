@@ -19,9 +19,9 @@ object Json {
   def jsonParser[Parser[+ _]](P: Parsers[Parser]): Parser[Json] = {
     import P._
 
-    val identifier = regex("""[A-Za-z][0-9A-Za-z_]*""".r)
-    val value      = regex("""[^"]+""".r)
-    val number     = regex("""[0-9]+(\.[0-9]+)?""".r)
+    val key    = regex("""[^"]+""".r) //regex("""[A-Za-z][0-9A-Za-z_]*""".r)
+    val value  = regex("""[^"]+""".r)
+    val number = regex("""[0-9]+(\.[0-9]+)?""".r)
 
     val colon = char(':')
     val comma = char(',')
@@ -29,7 +29,7 @@ object Json {
 
     val objBegin: Parser[Char]    = token(char('{'))
     val objEnd: Parser[Char]      = token(char('}'))
-    val fieldName: Parser[String] = token(skipLnR(quote, identifier, quote))
+    val fieldName: Parser[String] = token(skipLnR(quote, key, quote))
     val strValue: Parser[Json]    = token(skipLnR(quote, value, quote)).map(JString)
     val numValue: Parser[Json]    = token(number).map(x => JNumber(x.toDouble))
     val boolValue: Parser[Json] =

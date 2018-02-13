@@ -55,18 +55,18 @@ class JsonSpec extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks
       """{"a": 123.45,
         |"b" : 6789,
         |"c" : "abcd",
-        | "dtrue": true,
-        |  "dfalse" :false
+        | "d.true": true,
+        |  "d-false" :false
         | }""".stripMargin
 
     p.run(j)(input) shouldBe Right(
       JObject(
         Map(
-          "a"      -> JNumber(123.45d),
-          "b"      -> JNumber(6789.0d),
-          "c"      -> JString("abcd"),
-          "dtrue"  -> JBool(true),
-          "dfalse" -> JBool(false)
+          "a"       -> JNumber(123.45d),
+          "b"       -> JNumber(6789.0d),
+          "c"       -> JString("abcd"),
+          "d.true"  -> JBool(true),
+          "d-false" -> JBool(false)
         )))
 
   }
