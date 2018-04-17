@@ -251,10 +251,5 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
       r <- tokenGen
     } yield Part(l, c, r)
 
-  def wcGen: Gen[WC] =
-    for {
-      b    <- Arbitrary.arbitrary[Boolean]
-      stub <- stubGen
-      part <- partGen
-    } yield if (b) stub else part
+  def wcGen: Gen[WC] = Gen.oneOf(stubGen, partGen)
 }
