@@ -2,6 +2,7 @@ package fpinscala.monoids
 
 import org.scalacheck.Prop.forAll
 import org.scalacheck.{Arbitrary, Gen, Properties}
+import org.scalactic.{Equality, Equivalence}
 import org.scalatest.{FreeSpec, Matchers}
 import org.scalatest.prop.Checkers
 
@@ -10,18 +11,19 @@ import scala.concurrent.{Await, Future}
 import scala.util.Random
 
 object MonoidLaws {
-  def leftIdentity[A](m: Monoid[A])(a: A): Boolean =
-    m.op(m.zero, a) == a
+  def leftIdentity[A](m: Monoid[A])(a: A)(implicit eq: Equivalence[A]): Boolean =
+    eq.areEquivalent(m.op(m.zero, a), a)
 
-  def rightIdentity[A](m: Monoid[A])(a: A): Boolean =
-    m.op(a, m.zero) == a
+  def rightIdentity[A](m: Monoid[A])(a: A)(implicit eq: Equivalence[A]): Boolean =
+    eq.areEquivalent(m.op(a, m.zero), a)
 
-  def associative[A](m: Monoid[A])(a1: A, a2: A, a3: A): Boolean =
-    m.op(a1, m.op(a2, a3)) == m.op(m.op(a1, a2), a3)
+  def associative[A](m: Monoid[A])(a1: A, a2: A, a3: A)(implicit eq: Equivalence[A]): Boolean =
+    eq.areEquivalent(m.op(a1, m.op(a2, a3)), m.op(m.op(a1, a2), a3))
 }
 
-class MonoidProperties[A](monoid: Monoid[A])(implicit g1: Arbitrary[A])
-    extends Properties("Monoid") {
+class MonoidProperties[A](label: String, monoid: Monoid[A])(implicit g1: Arbitrary[A],
+                                                            eq: Equivalence[A])
+    extends Properties(label) {
 
   import MonoidLaws._
 
@@ -44,13 +46,12 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
 
   def checkAll(props: Properties): Unit = {
     for ((name, prop) <- props.properties) yield {
-      println(name)
-      check(prop)
+      check(prop.label(name))
     }
   }
 
   "String concatenation monoid laws" in {
-    checkAll(new MonoidProperties(stringMonoid))
+    checkAll(new MonoidProperties("stringMonoid", stringMonoid))
   }
 
   "List fold" in {
@@ -62,25 +63,25 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
   }
 
   "Int addition monoid laws" in {
-    checkAll(new MonoidProperties(intAddition))
+    checkAll(new MonoidProperties("intAddition", intAddition))
   }
 
   "Int multiplication monoid laws" in {
-    checkAll(new MonoidProperties(intMultiplication))
+    checkAll(new MonoidProperties("intMultiplication", intMultiplication))
   }
 
   "Boolean Or monoid laws" in {
-    checkAll(new MonoidProperties(booleanOr))
+    checkAll(new MonoidProperties("booleanOr", booleanOr))
   }
 
   "Boolean And monoid laws" in {
-    checkAll(new MonoidProperties(booleanAnd))
+    checkAll(new MonoidProperties("booleanAnd", booleanAnd))
   }
 
   "Option Monoid" in {
-    checkAll(new MonoidProperties(optionMonoid[String]))
-    checkAll(new MonoidProperties(optionMonoid[Int]))
-    checkAll(new MonoidProperties(optionMonoid[Boolean]))
+    checkAll(new MonoidProperties("optionMonoid[String]", optionMonoid[String]))
+    checkAll(new MonoidProperties("optionMonoid[Int]", optionMonoid[Int]))
+    checkAll(new MonoidProperties("optionMonoid[Boolean]", optionMonoid[Boolean]))
   }
 
   "foldMapV" in {
@@ -203,33 +204,51 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
 
   "semigroup with plus" in {
     val m = semigroupMonoid[Int]((a1, a2) => a1 + a2)
-    checkAll(new MonoidProperties(m))
+    checkAll(new MonoidProperties("semigroupMonoidWithPlus", m))
   }
 
   "semigroup with multiply" in {
     val m = semigroupMonoid[Int]((a1, a2) => a1 * a2)
-    checkAll(new MonoidProperties(m))
+    checkAll(new MonoidProperties("semigroupMonoidWithMultiply", m))
   }
 
   "wcMonoid" in {
-    checkAll(new MonoidProperties(wcMonoid)(Arbitrary(wcGen)))
+    checkAll(new MonoidProperties("wcMonoid", wcMonoid)(Arbitrary(wcGen), Equality.default[WC]))
   }
 
-  def textGen: Gen[String] = Gen.listOf(Arbitrary.arbitrary[String]).map(_.mkString(" "))
+  def myAssert[A](actual: A, expected: A)(eq: Equivalence[A]): Boolean = {
+    val result = eq.areEquivalent(actual, expected)
+    if (!result) println(s"ERROR: expected: $expected, actual: $actual")
+    result
+  }
 
-  def wordOrEmptyStrGen: Gen[String] =
-    for {
-      b <- Arbitrary.arbitrary[Boolean]
-      s <- Arbitrary.arbitrary[String]
-    } yield if (b) s else ""
+  "countWords" in {
+    check {
+      forAll(textGen) { str: String =>
+        val expected: Int = str.split("""\s+""").count(!_.isEmpty)
+        val actual: Int   = countWords(str)
+        myAssert(actual, expected)(Equality.default[Int])
+      }.label("countWords")
+    }
+  }
+
+  def tokenGen: Gen[String] =
+    Gen.oneOf(Gen.const(""),
+              Gen.const(" "),
+              Gen.const("\n"),
+              Gen.const("\r"),
+              Gen.const("\t"),
+              Gen.identifier)
+
+  def textGen: Gen[String] = Gen.listOf(tokenGen).map(_.mkString(" "))
 
   def stubGen: Gen[Stub] = textGen.map(Stub)
 
   def partGen: Gen[Part] =
     for {
-      l <- wordOrEmptyStrGen
+      l <- tokenGen
       c <- Gen.posNum[Int]
-      r <- wordOrEmptyStrGen
+      r <- tokenGen
     } yield Part(l, c, r)
 
   def wcGen: Gen[WC] =

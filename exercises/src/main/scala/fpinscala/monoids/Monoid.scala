@@ -160,6 +160,7 @@ object Monoid {
       override def zero: Future[A] = Future.successful(m.zero)
     }
 
+  // TODO implement it using foldMapV
   def parFoldMap[A, B](as: IndexedSeq[A], m: Monoid[B])(f: A => B)(
       implicit ec: ExecutionContext): Future[B] = {
     val fm = par(m)
@@ -199,7 +200,20 @@ object Monoid {
     //override def zero: WC = Part("", 0, "") -- zero + Stub must be Stub
   }
 
-  def count(s: String): Int = sys.error("todo")
+  def countWords(s: String): Int = {
+    def wc(c: Char): WC =
+      if (c.isWhitespace) Part("", 0, "")
+      else Stub(c.toString)
+
+    def unWc(a: String): Int = if (a.isEmpty) 0 else 1
+
+    val toCount: WC => Int = {
+      case Stub(a)       => unWc(a)
+      case Part(l, c, r) => unWc(l) + c + unWc(r)
+    }
+
+    toCount(foldMapV(s.toIndexedSeq, wcMonoid)(wc))
+  }
 
   def productMonoid[A, B](A: Monoid[A], B: Monoid[B]): Monoid[(A, B)] =
     sys.error("todo")
