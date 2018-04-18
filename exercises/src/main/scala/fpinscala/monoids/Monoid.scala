@@ -232,13 +232,12 @@ trait Foldable[F[_]] {
   import Monoid._
 
   def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B =
-    sys.error("todo")
+    foldMap(as)(endoMonoid[B])(
 
   def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B =
     sys.error("todo")
 
-  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
-    sys.error("todo")
+  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B
 
   def concatenate[A](as: F[A])(m: Monoid[A]): A =
     sys.error("todo")
@@ -252,8 +251,14 @@ object ListFoldable extends Foldable[List] {
     sys.error("todo")
   override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B) =
     sys.error("todo")
-  override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B =
-    sys.error("todo")
+  override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B = {
+    def loop(as: List[A], b: B): B = as match {
+      case Nil       => b
+      case h :: tail => loop(tail, mb.op(f(h), b))
+    }
+
+    loop(as, mb.zero)
+  }
 }
 
 object IndexedSeqFoldable extends Foldable[IndexedSeq] {
