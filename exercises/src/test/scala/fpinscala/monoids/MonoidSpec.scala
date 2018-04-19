@@ -216,7 +216,7 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
     checkAll(new MonoidProperties("wcMonoid", wcMonoid)(Arbitrary(wcGen), Equality.default[WC]))
   }
 
-  def myAssert[A](actual: A, expected: A)(eq: Equivalence[A]): Boolean = {
+  def myAssert[A](actual: A, expected: A)(implicit eq: Equivalence[A]): Boolean = {
     val result = eq.areEquivalent(actual, expected)
     if (!result) println(s"ERROR: expected: $expected, actual: $actual")
     result
@@ -230,6 +230,72 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
         myAssert(actual, expected)(Equality.default[Int])
       }.label("countWords")
     }
+  }
+
+  "ListFoldable.foldLeft" in {
+    check { list: List[Int] =>
+      myAssert(ListFoldable.foldLeft(list)(0)(_ + _), list.sum)
+    }
+  }
+
+  "ListFoldable.reverse" in {
+    check { list: List[Int] =>
+      myAssert(ListFoldable.foldLeft(list)(List.empty[Int])((b, a) => a :: b), list.reverse)
+    }
+  }
+
+  "StreamFoldable.foldLeft" in {
+    check { stream: Stream[Int] =>
+      myAssert(StreamFoldable.foldLeft(stream)(0)(_ + _), stream.sum)
+    }
+  }
+
+  "StreamFoldable.reverse" in {
+    check { stream: Stream[Int] =>
+      myAssert(StreamFoldable.foldLeft(stream)(Stream.empty[Int])((b, a) => a #:: b),
+               stream.reverse)
+    }
+  }
+
+  "TreeFoldable.foldLeft" in {
+    check {
+      val tree = Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))
+      myAssert(TreeFoldable.foldLeft(tree)(0)(_ + _), 10)
+    }
+  }
+
+  "TreeFoldable.toList" in {
+    check {
+      val tree = Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))
+      myAssert(TreeFoldable.toList(tree), 1 :: 2 :: 3 :: 4 :: Nil)
+    }
+  }
+
+  "TreeFoldable.reverse" in {
+    check {
+      val tree = Branch(Leaf(1), Branch(Leaf(2), Branch(Leaf(3), Leaf(4))))
+      myAssert(TreeFoldable.foldLeft(tree)(List.empty[Int])((b, a) => a :: b),
+               4 :: 3 :: 2 :: 1 :: Nil)
+    }
+  }
+
+  "OptionFoldable.foldMap" in {
+    check { o: Option[Int] =>
+      myAssert(OptionFoldable.foldMap(o)(identity)(intAddition), o.getOrElse(0))
+    }
+  }
+
+  "OptionFoldable.toList" in check { o: Option[Int] =>
+    myAssert(OptionFoldable.toList(o), o.fold(List.empty[Int])(a => List(a)))
+  }
+
+  "productMonoid" in {
+    val m = productMonoid(intAddition, stringMonoid)
+    checkAll(new MonoidProperties("productMonoid", m))
+  }
+
+  "bag" in check {
+    myAssert(bag(Vector("a", "rose", "is", "a", "rose")), Map("a" -> 2, "rose" -> 2, "is" -> 1))
   }
 
   def tokenGen: Gen[String] =
