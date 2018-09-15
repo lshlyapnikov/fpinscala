@@ -95,19 +95,20 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
       override def toString(): String = "{function g}"
     }
 
-    val feq: Equivalence[Int => Int] = new Equivalence[Int => Int] {
+    val fnEq: Equivalence[Int => Int] = new Equivalence[Int => Int] {
       override def areEquivalent(a: Int => Int, b: Int => Int): Boolean = {
-        // this is is not really an exhaustive check
+        // this is is not an exhaustive check
         a(12345) == b(12345) && a(0) == b(0) && a(-1234567) == b(-1234567)
       }
     }
 
-    assert(feq.areEquivalent(f, f))
+    assert(fnEq.areEquivalent(f, f))
 
-    val fGen: Gen[Int => Int]       = Gen.oneOf(f, g, (x: Int) => x * 123, (x: Int) => x * 5 + 6)
-    val fArb: Arbitrary[Int => Int] = Arbitrary(fGen)
+    val fnGen: Gen[Int => Int]       = Gen.oneOf(f, g, (x: Int) => x * 123, (x: Int) => x * 5 + 6)
+    val fnArb: Arbitrary[Int => Int] = Arbitrary(fnGen)
 
-    checkAll(new MonoidProperties("EndoMonoid", endoMonoid[Int])(fArb, feq))
+    checkAll(new MonoidProperties("EndoMonoid", endoMonoid[Int])(fnArb, fnEq))
+    checkAll(new MonoidProperties("EndoMonoid", endoMonoid2[Int])(fnArb, fnEq))
   }
 
   "foldMapV" in {
