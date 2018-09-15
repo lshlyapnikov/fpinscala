@@ -102,7 +102,7 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
       }
     }
 
-    assert(fnEq.areEquivalent(f, f))
+    assert(fnEq.areEquivalent(f, f) && fnEq.areEquivalent(g, g))
 
     val fnGen: Gen[Int => Int]       = Gen.oneOf(f, g, (x: Int) => x * 123, (x: Int) => x * 5 + 6)
     val fnArb: Arbitrary[Int => Int] = Arbitrary(fnGen)
@@ -323,6 +323,14 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
 
   "bag" in check {
     myAssert(bag(Vector("a", "rose", "is", "a", "rose")), Map("a" -> 2, "rose" -> 2, "is" -> 1))
+  }
+
+  "composed monoids" in check {
+    val m: Monoid[((Int, Int), Int)] =
+      productMonoid(productMonoid(intAddition, intMultiplication), intAddition)
+    val lst    = List(1, 2, 3, 4, 5)
+    val result = foldMap(lst, m)(a => ((a, a), 1))
+    myAssert(result, ((lst.sum, lst.product), lst.size))
   }
 
   def tokenGen: Gen[String] =
