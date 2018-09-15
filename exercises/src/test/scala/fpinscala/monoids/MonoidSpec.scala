@@ -27,11 +27,11 @@ class MonoidProperties[A](label: String, monoid: Monoid[A])(implicit g1: Arbitra
 
   import MonoidLaws._
 
-  property("left identity law") = forAll { (a: A) =>
+  property("left identity law") = forAll { a: A =>
     leftIdentity(monoid)(a)
   }
 
-  property("right identity law") = forAll { (a: A) =>
+  property("right identity law") = forAll { a: A =>
     rightIdentity(monoid)(a)
   }
 
@@ -82,6 +82,32 @@ class MonoidSpec extends FreeSpec with Matchers with Checkers {
     checkAll(new MonoidProperties("optionMonoid[String]", optionMonoid[String]))
     checkAll(new MonoidProperties("optionMonoid[Int]", optionMonoid[Int]))
     checkAll(new MonoidProperties("optionMonoid[Boolean]", optionMonoid[Boolean]))
+  }
+
+  "EndoMonoid" in {
+    case object f extends (Int => Int) {
+      def apply(x: Int)               = x * 10
+      override def toString(): String = "{function f}"
+    }
+
+    case object g extends (Int => Int) {
+      def apply(x: Int)               = x + 100
+      override def toString(): String = "{function g}"
+    }
+
+    val feq: Equivalence[Int => Int] = new Equivalence[Int => Int] {
+      override def areEquivalent(a: Int => Int, b: Int => Int): Boolean = {
+        // this is is not really an exhaustive check
+        a(12345) == b(12345) && a(0) == b(0) && a(-1234567) == b(-1234567)
+      }
+    }
+
+    assert(feq.areEquivalent(f, f))
+
+    val fGen: Gen[Int => Int]       = Gen.oneOf(f, g, (x: Int) => x * 123, (x: Int) => x * 5 + 6)
+    val fArb: Arbitrary[Int => Int] = Arbitrary(fGen)
+
+    checkAll(new MonoidProperties("EndoMonoid", endoMonoid[Int])(fArb, feq))
   }
 
   "foldMapV" in {

@@ -73,6 +73,19 @@ object Monoid {
     override def zero: A => A = a => a
   }
 
+  case class identityFn[A]() extends (A => A) {
+    def apply(x: A): A = x
+  }
+
+  def endoMonoid2[A]: Monoid[A => A] = new Monoid[A => A] {
+    override def op(f: A => A, g: A => A): A => A =
+      if (f == identityFn[A]()) g
+      else if (g == identityFn[A]()) f
+      else f compose g
+
+    override def zero: A => A = identityFn[A]()
+  }
+
   def dual[A](m: Monoid[A]): Monoid[A] = new Monoid[A] {
     def op(x: A, y: A): A = m.op(y, x)
     val zero              = m.zero
