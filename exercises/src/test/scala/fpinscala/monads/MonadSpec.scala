@@ -16,7 +16,7 @@ class MonadSpec extends FreeSpec with Matchers with Checkers {
     }
   }
 
-  def myAssert[A](actual: A, expected: A)(implicit eq: Equivalence[A]): Boolean = {
+  def myAssert[A](actual: A)(expected: A)(implicit eq: Equivalence[A]): Boolean = {
     val result = eq.areEquivalent(actual, expected)
     if (!result) println(s"ERROR: expected: $expected, actual: $actual")
     result
@@ -31,14 +31,32 @@ class MonadSpec extends FreeSpec with Matchers with Checkers {
   }
 
   "listMonad.replicateM" in check {
-    forAll(Gen.listOf(Arbitrary.arbitrary[Int]), Gen.choose(0, 32)) { (list: List[Int], n: Int) =>
-      val actual: List[List[Int]] = listMonad.replicateM(n, list)
-      if (list.isEmpty) myAssert(actual, List(List.empty[Int]))
-      else myAssert(actual, List.fill(n)(list))
+    forAll(Gen.listOf(Arbitrary.arbitrary[Int]), Gen.choose(0, 5)) { (input: List[Int], n: Int) =>
+      println(s"-- input: $input, n: $n")
+      val actual: List[List[Int]] = listMonad.replicateM(n, input)
+      if (input.isEmpty) myAssert(actual)(List.empty)
+      else myAssert(actual)(List(List.fill(n)(input).flatten))
     }
   }
 
-  "listMonad.repliaceM(1, List())" in {
-    listMonad.replicateM(1, List.empty[Int]) shouldBe List(List.empty[Int])
+  "listMonad.repliateM(1, List())" in {
+    myAssert(listMonad.replicateM(1, List.empty[Int]))(List.empty)
+  }
+
+  "listMonad.repliateM(0, List())" in {
+    myAssert(listMonad.replicateM(0, List.empty[Int]))(List.empty)
+  }
+
+  "filterM" in {
+    val as: List[Int]         = List(1, 2, 3, 4, 5)
+    val bs: Option[List[Int]] = optionMonad.filterM(as)(x => Some(x % 2 == 0))
+    bs shouldBe Some(List(2, 4))
+
+    val cs: Option[List[Int]] = optionMonad.filterM(as)(_ => None)
+    cs shouldBe None
+  }
+
+  "flatMapViaCompose" in {
+    optionMonad.flatMapViaCompose(Some(10))(x => Some(x + 1)) shouldBe Some(11)
   }
 }
