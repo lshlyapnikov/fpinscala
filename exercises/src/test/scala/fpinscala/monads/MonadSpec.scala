@@ -59,4 +59,23 @@ class MonadSpec extends FreeSpec with Matchers with Checkers {
   "flatMapViaCompose" in {
     optionMonad.flatMapViaCompose(Some(10))(x => Some(x + 1)) shouldBe Some(11)
   }
+
+  "Try associativity" in {
+    import scala.util.{Try, Success, Failure}
+    def f(a: Int): Try[Int] = Try(a * 10)
+    def g(a: Int): Try[Int] = Try(a * 100)
+
+    Success(2).flatMap(f).flatMap(g) shouldBe Success(2).flatMap { a =>
+      f(a).flatMap(g)
+    }
+
+    case class MyException(msg: String) extends Exception(msg)
+    Failure[Int](MyException("dummy")).flatMap(f).flatMap(g) shouldBe Failure[Int](MyException("dummy")).flatMap { a =>
+      f(a).flatMap(g)
+    }
+
+    Try(1 / 0).flatMap(f).flatMap(g) should not be Try(1 / 0).flatMap { a =>
+      f(a).flatMap(g)
+    }
+  }
 }
