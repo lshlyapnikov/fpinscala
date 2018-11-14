@@ -4,35 +4,57 @@ package applicative
 import monads.Functor
 import state._
 import State._
-import StateUtil._ // defined at bottom of this file
+import StateUtil._
 import monoids._
-import language.higherKinds
-import language.implicitConversions
 
-trait Applicative[F[_]] extends Functor[F] {
+import language.{higherKinds, implicitConversions, reflectiveCalls}
 
-  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = ???
+trait Applicative[F[_]] extends Functor[F] { self =>
 
-  def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = ???
+  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = {
+//    type H = B => C
+//    val g: A => H     = f.curried
+//    val fh: F[B => C] = apply(unit(g))(fa)
+    val g: A => B => C = f.curried
+    val fh: F[B => C]  = map(fa)(g)
+    apply(fh)(fb)
+  }
+
+  def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = {
+    map2(fab, fa) { (f: A => B, a: A) =>
+      f(a)
+    }
+  }
 
   def unit[A](a: => A): F[A]
 
   def map[A, B](fa: F[A])(f: A => B): F[B] =
     apply(unit(f))(fa)
 
-//  def mapViaMap2[A, B](fa: F[A])(f: A => B): F[B] =
-//    map2(fa, unit(())((a, _) => f(a))
+  def mapViaMap2[A, B](fa: F[A])(f: A => B): F[B] =
+    map2(fa, unit(())) { (a: A, _: Unit) =>
+      f(a)
+    }
 
-  def sequence[A](fas: List[F[A]]): F[List[A]] = ???
+  def sequence[A](fas: List[F[A]]): F[List[A]] = traverse(fas)(identity)
 
-  def traverse[A, B](as: List[A])(f: A => F[B]): F[List[B]] = ???
-
+  def traverse[A, B](as: List[A])(f: A => F[B]): F[List[B]] =
+    as.foldRight(unit(List.empty[B])) { (a: A, fbs: F[List[B]]) =>
+      map2(f(a), fbs) { (b: B, bs: List[B]) =>
+        b :: bs
+      }
+    }
 
   def replicateM[A](n: Int, fa: F[A]): F[List[A]] = ???
 
   def factor[A, B](fa: F[A], fb: F[B]): F[(A, B)] = ???
 
-  def product[G[_]](G: Applicative[G]): Applicative[({ type f[x] = (F[x], G[x]) })#f] = ???
+  def product[G[_]](G: Applicative[G]): Applicative[({ type f[x] = (F[x], G[x]) })#f] = {
+//    val self: Applicative[F] = this
+    new Applicative[({ type f[x] = (F[x], G[x]) })#f] {
+      override def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), G.unit(a))
+    }
+  }
 
   def compose[G[_]](G: Applicative[G]): Applicative[({ type f[x] = F[G[x]] })#f] = ???
 
