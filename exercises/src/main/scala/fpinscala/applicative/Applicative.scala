@@ -20,6 +20,38 @@ trait Applicative[F[_]] extends Functor[F] { self =>
     apply(fh)(fb)
   }
 
+  def map3_a[A, B, C, D](fa: F[A], fb: F[B], fc: F[C])(f: (A, B, C) => D): F[D] = {
+    val g: (A, B) => C => D = (a, b) => c => f(a, b, c)
+    val fcd: F[C => D]      = map2(fa, fb)(g)
+    apply(fcd)(fc)
+  }
+
+  def map3[A, B, C, D](fa: F[A], fb: F[B], fc: F[C])(f: (A, B, C) => D): F[D] = {
+    val g: A => B => C => D  = f.curried
+    val fbcd: F[B => C => D] = apply(unit(g))(fa)
+    val fcd: F[C => D]       = apply(fbcd)(fb)
+    apply(fcd)(fc)
+  }
+
+  def map4_a[A, B, C, D, E](fa: F[A], fb: F[B], fc: F[C], fd: F[D])(f: (A, B, C, D) => E): F[E] = {
+    val g: (A, B, C) => D => E = (a, b, c) => d => f(a, b, c, d)
+    val fde: F[D => E]         = map3(fa, fb, fc)(g)
+    apply(fde)(fd)
+  }
+
+  def map4[A, B, C, D, E](fa: F[A], fb: F[B], fc: F[C], fd: F[D])(f: (A, B, C, D) => E): F[E] = {
+    val g: A => B => C => D => E   = f.curried
+    val fbcde: F[B => C => D => E] = apply(unit(g))(fa)
+    val fcde: F[C => D => E]       = apply(fbcde)(fb)
+    val fde: F[D => E]             = apply(fcde)(fc)
+    apply(fde)(fd)
+  }
+
+  def map4_b[A, B, C, D, E](fa: F[A], fb: F[B], fc: F[C], fd: F[D])(f: (A, B, C, D) => E): F[E] = {
+    val g: A => B => C => D => E = f.curried
+    apply(apply(apply(apply(unit(g))(fa))(fb))(fc))(fd)
+  }
+
   def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = {
     map2(fab, fa) { (f: A => B, a: A) =>
       f(a)
