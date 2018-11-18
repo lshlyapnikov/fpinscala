@@ -81,21 +81,32 @@ trait Applicative[F[_]] extends Functor[F] { self =>
 
   def factor[A, B](fa: F[A], fb: F[B]): F[(A, B)] = ???
 
-  def product[G[_]](G: Applicative[G]): Applicative[({ type f[x] = (F[x], G[x]) })#f] = {
-//    val self: Applicative[F] = this
+  def product1[G[_]](g: Applicative[G]): Applicative[({ type f[x] = (F[x], G[x]) })#f] =
     new Applicative[({ type f[x] = (F[x], G[x]) })#f] {
-      override def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), G.unit(a))
-    }
-  }
+      override def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), g.unit(a))
 
-  def compose[G[_]](G: Applicative[G]): Applicative[({ type f[x] = F[G[x]] })#f] = ???
+      override def map2[A, B, C](fa: (F[A], G[A]), fb: (F[B], G[B]))(
+          f: (A, B) => C): (F[C], G[C]) = {
+        (self.map2(fa._1, fb._1)(f), g.map2(fa._2, fb._2)(f))
+      }
+    }
+
+  def compose[G[_]](g: Applicative[G]): Applicative[({ type f[x] = F[G[x]] })#f] =
+    new Applicative[({ type f[x] = F[G[x]] })#f] {
+      override def unit[A](a: => A): F[G[A]] = self.unit(g.unit(a))
+
+      override def map2[A, B, C](fa: F[G[A]], fb: F[G[B]])(f: (A, B) => C): F[G[C]] =
+        self.map2(fa, fb) { (ga: G[A], gb: G[B]) =>
+          g.map2(ga, gb)(f)
+        }
+    }
 
   def sequenceMap[K, V](ofa: Map[K, F[V]]): F[Map[K, V]] = ???
 }
 
 case class Tree[+A](head: A, tail: List[Tree[A]])
 
-trait Monad[F[_]] extends Applicative[F] {
+trait Monad[F[_]] extends Applicative[F] { self =>
   def flatMap[A, B](ma: F[A])(f: A => F[B]): F[B] = join(map(ma)(f))
 
   def join[A](mma: F[F[A]]): F[A] = flatMap(mma)(ma => ma)
@@ -105,6 +116,20 @@ trait Monad[F[_]] extends Applicative[F] {
 
   override def apply[A, B](mf: F[A => B])(ma: F[A]): F[B] =
     flatMap(mf)(f => map(ma)(a => f(a)))
+
+  def compose2[G[_]](G: Monad[G]): Monad[({ type f[x] = F[G[x]] })#f] =
+    new Monad[({ type f[x] = F[G[x]] })#f] {
+      override def unit[A](a: => A): F[G[A]] = self.unit(G.unit(a))
+
+      override def flatMap[A, B](fga: F[G[A]])(f: A => F[G[B]]): F[G[B]] =
+        self.flatMap(fga) { ga: G[A] =>
+          G.flatMap(ga) { a: A =>
+            val fgb: F[G[B]] = f(a) // need G[B] in here!
+            ???
+          }
+          ???
+        }
+    }
 }
 
 object Monad {
