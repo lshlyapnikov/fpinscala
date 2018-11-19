@@ -2,6 +2,9 @@ package fpinscala.applicative
 
 import org.scalatest.{FreeSpec, Matchers}
 
+import scala.language.reflectiveCalls
+import scala.util.control.NonFatal
+
 class ApplicativeSpec extends FreeSpec with Matchers {
   import fpinscala.applicative.Applicative._
 
@@ -19,5 +22,29 @@ class ApplicativeSpec extends FreeSpec with Matchers {
                                                    Failure("error4", Vector("error5")))
     val result: Validation[String, List[Int]] = validationApplicative.sequence(list)
     result shouldBe Failure("error1", Vector("error2", "error3", "error4", "error5"))
+  }
+
+  "treeTraverse" in {
+    import fpinscala.applicative.Traverse.treeTraverse
+    import fpinscala.applicative.Monad.eitherMonad
+
+    type Out[X] = Either[String, X]
+
+    def parse(s: String): Out[Int] =
+      try {
+        Right(s.toInt)
+      } catch {
+        case NonFatal(_) => Left(s"Cannot convert to Int: $s")
+      }
+
+    val t1: Tree[String] = Tree("1", List(Tree("2", List(Tree("3", List(Tree("4"))), Tree("5")))))
+    val ev1: Applicative[({ type f[x] = Either[String, x] })#f] = eitherApplicative[String]
+    val et1: Out[Tree[Int]] = treeTraverse.traverse(t1)(parse)(ev1)
+    et1 shouldBe Right(Tree(1, List(Tree(2, List(Tree(3, List(Tree(4))), Tree(5))))))
+
+    val t2: Tree[String] =
+      Tree("1", List(Tree("2", List(Tree("3abc", List(Tree("4"))), Tree("5")))))
+    val et2: Out[Tree[Int]] = treeTraverse.traverse(t2)(parse)(ev1)
+    et2 shouldBe Left("Cannot convert to Int: 3abc")
   }
 }
