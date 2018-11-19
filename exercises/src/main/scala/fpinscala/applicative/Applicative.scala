@@ -276,13 +276,21 @@ object Traverse {
   val optionTraverse = new Traverse[Option] {
     override def map[A, B](fa: Option[A])(f: A => B): Option[B] = fa.map(f)
 
-    override def sequence[G[_]: Applicative, A](fma: Option[G[A]]): G[Option[A]] = {
+    override def traverse[G[_]: Applicative, A, B](fa: Option[A])(f: A => G[B]): G[Option[B]] = {
       val G: Applicative[G] = implicitly
-      fma match {
-        case None     => G.unit(None)
-        case Some(ga) => G.map(ga)((a: A) => Some(a))
+      fa match {
+        case None    => G.unit(None)
+        case Some(a) => G.map(f(a))((b: B) => Some(b))
       }
     }
+//
+//    override def sequence[G[_]: Applicative, A](fma: Option[G[A]]): G[Option[A]] = {
+//      val G: Applicative[G] = implicitly
+//      fma match {
+//        case None     => G.unit(None)
+//        case Some(ga) => G.map(ga)((a: A) => Some(a))
+//      }
+//    }
   }
 
   val treeTraverse = new Traverse[Tree] { self =>
