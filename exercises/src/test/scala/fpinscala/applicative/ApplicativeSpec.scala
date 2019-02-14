@@ -47,4 +47,11 @@ class ApplicativeSpec extends FreeSpec with Matchers {
     val et2: Out[Tree[Int]] = treeTraverse.traverse(t2)(parse)(ev1)
     et2 shouldBe Left("Cannot convert to Int: 3abc")
   }
+
+  "Traverse.foldLeft" in {
+    import fpinscala.applicative.Traverse._
+    // TODO: figure out the cause of java.lang.StackOverflowError
+    listTraverse.foldLeft(List(10, 20, 30))(0)((b, a) => b + a) shouldBe 60
+    listTraverse.foldLeft(List(10, 20, 30))(0)((b, a) => b - a) shouldBe -40
+  }
 }
