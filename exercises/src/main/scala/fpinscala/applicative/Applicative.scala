@@ -104,6 +104,15 @@ trait Applicative[F[_]] extends Functor[F] {
       }
     }
 
+  def product[G[_]](G: Applicative[G]): Applicative[({ type f[x] = (F[x], G[x]) })#f] =
+    new Applicative[({ type f[x] = (F[x], G[x]) })#f] {
+      override def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), G.unit(a))
+
+      override def apply[A, B](fab: (F[A => B], G[A => B]))(fa: (F[A], G[A])): (F[B], G[B]) = {
+        (self.apply(fab._1)(fa._1), G.apply(fab._2)(fa._2))
+      }
+    }
+
   def compose[G[_]](g: Applicative[G]): Applicative[({ type f[x] = F[G[x]] })#f] =
     new Applicative[({ type f[x] = F[G[x]] })#f] {
       override def unit[A](a: => A): F[G[A]] = self.unit(g.unit(a))
