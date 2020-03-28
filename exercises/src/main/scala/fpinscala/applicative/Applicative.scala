@@ -323,6 +323,14 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
     traverseS(fa)((a: A) => stateB(a)).run(s)
   }
 
+  def mapAccum_answer[S, A, B](fa: F[A], s: S)(f: (A, S) => (B, S)): (F[B], S) =
+    traverseS(fa)((a: A) =>
+      (for {
+        s1 <- get[S]
+        (b, s2) = f(a, s1)
+        _ <- set(s2)
+      } yield b)).run(s)
+
   override def toList[A](fa: F[A]): List[A] =
     mapAccum(fa, List[A]())((a, s) => ((), a :: s))._2.reverse
 
@@ -333,7 +341,7 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
     mapAccum(fa, 0)((a, s) => ((a, s), s + 1))._1
 
   def reverse[A](fa: F[A]): F[A] =
-    mapAccum(fa, toList(fa).reverse)((_: A, s: List[A]) => (s.head, s.tail))._1
+    mapAccum(fa, toList(fa).reverse)((_: A, as: List[A]) => (as.head, as.tail))._1
 
   def reverse_a[A](fa: F[A]): F[A] = {
     val result: (F[A], List[A]) =
@@ -341,11 +349,20 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
     result._1
   }
 
-  override def foldLeft[A, B](fa: F[A])(z: B)(f: (B, A) => B): B = ???
+  override def foldLeft[A, B](fa: F[A])(z: B)(f: (B, A) => B): B = {
+    val r: (F[Unit], B) = mapAccum(fa, z) { (a: A, b: B) =>
+      val b1: B = f(b, a)
+      ((), b1)
+    }
+    r._2
+  }
 
   def fuse[G[_], H[_], A, B](fa: F[A])(f: A => G[B], g: A => H[B])(
       implicit G: Applicative[G],
-      H: Applicative[H]): (G[F[B]], H[F[B]]) = ???
+      H: Applicative[H]): (G[F[B]], H[F[B]]) = {
+
+    traverse[({ type f[x] = (G[x], H[x]) })#f, A, B](fa)(a => (f(a), g(a)))(G product1 H)
+  }
 
   def compose[G[_]](implicit G: Traverse[G]): Traverse[({ type f[x] = F[G[x]] })#f] = ???
 }
@@ -354,12 +371,16 @@ object Traverse {
   val listTraverse = new Traverse[List] {
     override def map[A, B](fa: List[A])(f: A => B): List[B] = super.map(fa)(f)
 
-    override def sequence[G[_]: Applicative, A](fma: List[G[A]]): G[List[A]] = {
-      val G: Applicative[G] = implicitly
-      fma.foldRight(G.unit(List.empty[A])) { (ga: G[A], gla: G[List[A]]) =>
-        G.map2(ga, gla)((a: A, la: List[A]) => a :: la)
-      }
-    }
+//    override def sequence[G[_]: Applicative, A](fma: List[G[A]]): G[List[A]] = {
+//      val G: Applicative[G] = implicitly
+//      fma.foldRight(G.unit(List.empty[A])) { (ga: G[A], gla: G[List[A]]) =>
+//        G.map2(ga, gla)((a: A, la: List[A]) => a :: la)
+//      }
+//    }
+
+    override def traverse[M[_], A, B](as: List[A])(f: A => M[B])(
+        implicit M: Applicative[M]): M[List[B]] =
+      as.foldRight(M.unit(List[B]()))((a, fbs) => M.map2(f(a), fbs)(_ :: _))
   }
 
   val optionTraverse = new Traverse[Option] {
